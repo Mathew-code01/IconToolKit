@@ -1,21 +1,16 @@
 // src/pages/Generator/UploadPanel.tsx
-import {  RotateCcw, RotateCw, Redo2, Undo2 } from "lucide-react";
+import { ChevronDown, Redo2, RotateCcw, RotateCw, Undo2 } from "lucide-react";
+import { useState } from "react";
+
+import CropEditor, { type CropSettings } from "./CropEditor";
 
 export type EditorBackgroundMode = "transparent" | "solid" | "gradient";
-
-export interface CropSettings {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
 
 export interface EditorSettings {
   padding: number;
   scale: number;
 
-  backgroundMode: "transparent" | "solid" | "gradient";
-
+  backgroundMode: EditorBackgroundMode;
   background: string;
 
   gradientFrom: string;
@@ -46,6 +41,7 @@ export interface EditorSettings {
 
 interface EditorPanelProps {
   settings: EditorSettings;
+  imageUrl: string | null;
 
   onChange: (updates: Partial<EditorSettings>) => void;
 
@@ -61,16 +57,83 @@ interface EditorPanelProps {
   onRotateRight: () => void;
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
+const DEFAULT_SETTINGS: Omit<EditorSettings, "crop"> = {
+  padding: 10,
+  scale: 100,
+
+  backgroundMode: "transparent",
+  background: "#ffffff",
+
+  gradientFrom: "#6366f1",
+  gradientTo: "#8b5cf6",
+  gradientAngle: 135,
+
+  fit: "contain",
+
+  positionX: 50,
+  positionY: 50,
+
+  zoom: 100,
+  rotation: 0,
+
+  borderRadius: 20,
+
+  borderWidth: 0,
+  borderColor: "#ffffff",
+
+  shadow: false,
+  shadowBlur: 20,
+  shadowOpacity: 25,
+  shadowOffsetX: 0,
+  shadowOffsetY: 8,
+};
+
+function Accordion({
+  title,
+  description,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string;
+  description: string;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
   return (
-    <p className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-      {children}
-    </p>
+    <div className="border-b border-[var(--border)] last:border-b-0">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between gap-3 py-4 text-left"
+      >
+        <span>
+          <span className="block text-sm font-semibold text-[var(--text)]">
+            {title}
+          </span>
+
+          <span className="mt-0.5 block text-[10px] text-[var(--text-muted)]">
+            {description}
+          </span>
+        </span>
+
+        <ChevronDown
+          size={16}
+          className={`shrink-0 transition-transform ${
+            open ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {open && <div className="pb-5">{children}</div>}
+    </div>
   );
 }
 
 export default function EditorPanel({
   settings,
+  imageUrl,
   onChange,
   disabled = false,
   onUndo,
@@ -80,41 +143,15 @@ export default function EditorPanel({
   onRotateLeft,
   onRotateRight,
 }: EditorPanelProps) {
+  const [openSection, setOpenSection] = useState("crop");
+
+  const toggle = (section: string) => {
+    setOpenSection((current) => (current === section ? "" : section));
+  };
+
   const reset = () => {
     onChange({
-      padding: 10,
-      scale: 100,
-
-      backgroundMode: "transparent",
-
-      background: "#ffffff",
-
-      gradientFrom: "#6366f1",
-
-      gradientTo: "#8b5cf6",
-
-      gradientAngle: 135,
-
-      fit: "contain",
-
-      positionX: 50,
-      positionY: 50,
-
-      zoom: 100,
-      rotation: 0,
-
-      borderRadius: 20,
-
-      borderWidth: 0,
-      borderColor: "#ffffff",
-
-      shadow: false,
-
-      shadowBlur: 20,
-      shadowOpacity: 25,
-      shadowOffsetX: 0,
-      shadowOffsetY: 8,
-
+      ...DEFAULT_SETTINGS,
       crop: {
         x: 0,
         y: 0,
@@ -126,219 +163,107 @@ export default function EditorPanel({
 
   return (
     <section
-      className={`rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 ${
+      className={`rounded-2xl border border-[var(--border)] bg-[var(--surface)] ${
         disabled ? "opacity-60" : ""
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold text-[var(--text)]">Editor</h2>
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-[var(--text)]">Editor</h2>
 
-          <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-            Fine-tune every part of your icon.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={reset}
-          disabled={disabled}
-          className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--text-muted)] hover:bg-[var(--surface-muted)]"
-        >
-          <RotateCcw size={13} />
-          Reset
-        </button>
-      </div>
-
-      <div className="mt-4 flex gap-2">
-        <button
-          type="button"
-          disabled={disabled || !canUndo}
-          onClick={onUndo}
-          className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium hover:bg-[var(--surface-muted)] disabled:opacity-40"
-        >
-          <Undo2 size={14} />
-          Undo
-        </button>
-
-        <button
-          type="button"
-          disabled={disabled || !canRedo}
-          onClick={onRedo}
-          className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium hover:bg-[var(--surface-muted)] disabled:opacity-40"
-        >
-          <Redo2 size={14} />
-          Redo
-        </button>
-      </div>
-
-      <div className="mt-6 space-y-7">
-        {/* CROP */}
-        <div>
-          <SectionTitle>Crop</SectionTitle>
-
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            {[
-              {
-                label: "Full image",
-                crop: {
-                  x: 0,
-                  y: 0,
-                  width: 100,
-                  height: 100,
-                },
-              },
-              {
-                label: "Center",
-                crop: {
-                  x: 15,
-                  y: 15,
-                  width: 70,
-                  height: 70,
-                },
-              },
-              {
-                label: "Square",
-                crop: {
-                  x: 10,
-                  y: 0,
-                  width: 80,
-                  height: 100,
-                },
-              },
-              {
-                label: "Tight",
-                crop: {
-                  x: 20,
-                  y: 20,
-                  width: 60,
-                  height: 60,
-                },
-              },
-            ].map((preset) => (
-              <button
-                key={preset.label}
-                type="button"
-                disabled={disabled}
-                onClick={() =>
-                  onChange({
-                    crop: preset.crop,
-                  })
-                }
-                className="rounded-lg border border-[var(--border)] px-2 py-2 text-xs font-medium hover:bg-[var(--surface-muted)]"
-              >
-                {preset.label}
-              </button>
-            ))}
+            <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+              Adjust your icon visually.
+            </p>
           </div>
 
-          <div className="mt-4 space-y-4">
-            <Range
-              label="Crop X"
-              value={settings.crop.x}
-              min={0}
-              max={80}
-              disabled={disabled}
-              onChange={(value) =>
-                onChange({
-                  crop: {
-                    ...settings.crop,
-                    x: value,
-                    width: Math.min(settings.crop.width, 100 - value),
-                  },
-                })
-              }
-            />
-
-            <Range
-              label="Crop Y"
-              value={settings.crop.y}
-              min={0}
-              max={80}
-              disabled={disabled}
-              onChange={(value) =>
-                onChange({
-                  crop: {
-                    ...settings.crop,
-                    y: value,
-                    height: Math.min(settings.crop.height, 100 - value),
-                  },
-                })
-              }
-            />
-
-            <Range
-              label="Crop width"
-              value={settings.crop.width}
-              min={20}
-              max={100}
-              disabled={disabled}
-              onChange={(value) =>
-                onChange({
-                  crop: {
-                    ...settings.crop,
-                    width: Math.min(value, 100 - settings.crop.x),
-                  },
-                })
-              }
-            />
-
-            <Range
-              label="Crop height"
-              value={settings.crop.height}
-              min={20}
-              max={100}
-              disabled={disabled}
-              onChange={(value) =>
-                onChange({
-                  crop: {
-                    ...settings.crop,
-                    height: Math.min(value, 100 - settings.crop.y),
-                  },
-                })
-              }
-            />
-          </div>
+          <button
+            type="button"
+            onClick={reset}
+            disabled={disabled}
+            className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--text-muted)] hover:bg-[var(--surface-muted)]"
+          >
+            <RotateCcw size={13} />
+            Reset
+          </button>
         </div>
 
-        {/* TRANSFORM */}
-        <div>
-          <SectionTitle>Transform</SectionTitle>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            disabled={disabled || !canUndo}
+            onClick={onUndo}
+            className="flex items-center justify-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium hover:bg-[var(--surface-muted)] disabled:opacity-40"
+          >
+            <Undo2 size={14} />
+            Undo
+          </button>
 
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            disabled={disabled || !canRedo}
+            onClick={onRedo}
+            className="flex items-center justify-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium hover:bg-[var(--surface-muted)] disabled:opacity-40"
+          >
+            <Redo2 size={14} />
+            Redo
+          </button>
+        </div>
+      </div>
+
+      <div className="px-4">
+        <Accordion
+          title="Crop"
+          description="Choose exactly which part of the image to use."
+          open={openSection === "crop"}
+          onToggle={() => toggle("crop")}
+        >
+          {imageUrl && (
+            <CropEditor
+              imageUrl={imageUrl}
+              crop={settings.crop}
+              disabled={disabled}
+              onChange={(crop) => onChange({ crop })}
+            />
+          )}
+        </Accordion>
+
+        <Accordion
+          title="Transform"
+          description="Rotate, scale, zoom and position."
+          open={openSection === "transform"}
+          onToggle={() => toggle("transform")}
+        >
+          <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               disabled={disabled}
               onClick={onRotateLeft}
-              className="flex items-center justify-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium hover:bg-[var(--surface-muted)]"
+              className="flex items-center justify-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2.5 text-xs font-medium hover:bg-[var(--surface-muted)]"
             >
               <RotateCcw size={14} />
-              90° left
+              Rotate left
             </button>
 
             <button
               type="button"
               disabled={disabled}
               onClick={onRotateRight}
-              className="flex items-center justify-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium hover:bg-[var(--surface-muted)]"
+              className="flex items-center justify-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2.5 text-xs font-medium hover:bg-[var(--surface-muted)]"
             >
               <RotateCw size={14} />
-              90° right
+              Rotate right
             </button>
           </div>
 
-          <div className="mt-4 space-y-4">
+          <div className="mt-5 space-y-4">
             <Range
               label="Rotation"
               value={settings.rotation}
               min={0}
               max={360}
               disabled={disabled}
-              onChange={(value) =>
-                onChange({
-                  rotation: value,
-                })
-              }
+              onChange={(value) => onChange({ rotation: value })}
               suffix="°"
             />
 
@@ -348,11 +273,7 @@ export default function EditorPanel({
               min={50}
               max={200}
               disabled={disabled}
-              onChange={(value) =>
-                onChange({
-                  zoom: value,
-                })
-              }
+              onChange={(value) => onChange({ zoom: value })}
               suffix="%"
             />
 
@@ -362,46 +283,27 @@ export default function EditorPanel({
               min={50}
               max={160}
               disabled={disabled}
-              onChange={(value) =>
-                onChange({
-                  scale: value,
-                })
-              }
+              onChange={(value) => onChange({ scale: value })}
               suffix="%"
             />
-          </div>
-        </div>
 
-        {/* POSITION */}
-        <div>
-          <SectionTitle>Position</SectionTitle>
-
-          <div className="mt-3 space-y-4">
             <Range
-              label="Horizontal"
+              label="Horizontal position"
               value={settings.positionX}
               min={0}
               max={100}
               disabled={disabled}
-              onChange={(value) =>
-                onChange({
-                  positionX: value,
-                })
-              }
+              onChange={(value) => onChange({ positionX: value })}
               suffix="%"
             />
 
             <Range
-              label="Vertical"
+              label="Vertical position"
               value={settings.positionY}
               min={0}
               max={100}
               disabled={disabled}
-              onChange={(value) =>
-                onChange({
-                  positionY: value,
-                })
-              }
+              onChange={(value) => onChange({ positionY: value })}
               suffix="%"
             />
 
@@ -411,83 +313,65 @@ export default function EditorPanel({
               min={0}
               max={45}
               disabled={disabled}
-              onChange={(value) =>
-                onChange({
-                  padding: value,
-                })
-              }
+              onChange={(value) => onChange({ padding: value })}
               suffix="%"
             />
           </div>
-        </div>
+        </Accordion>
 
-        {/* BACKGROUND */}
-        <div>
-          <SectionTitle>Background</SectionTitle>
-
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            {[
-              {
-                id: "transparent",
-                label: "Clear",
-              },
-              {
-                id: "solid",
-                label: "Solid",
-              },
-              {
-                id: "gradient",
-                label: "Gradient",
-              },
-            ].map((item) => (
+        <Accordion
+          title="Background"
+          description="Transparent, solid or gradient."
+          open={openSection === "background"}
+          onToggle={() => toggle("background")}
+        >
+          <div className="grid grid-cols-3 gap-2">
+            {(
+              [
+                ["transparent", "Transparent"],
+                ["solid", "Solid"],
+                ["gradient", "Gradient"],
+              ] as const
+            ).map(([id, label]) => (
               <button
-                key={item.id}
+                key={id}
                 type="button"
                 disabled={disabled}
                 onClick={() =>
                   onChange({
-                    backgroundMode: item.id as EditorBackgroundMode,
+                    backgroundMode: id,
                   })
                 }
-                className={`rounded-lg border px-2 py-2 text-xs font-medium ${
-                  settings.backgroundMode === item.id
+                className={`rounded-lg border px-2 py-2.5 text-xs font-medium ${
+                  settings.backgroundMode === id
                     ? "border-[#6366F1] bg-[#6366F1]/10 text-[#6366F1]"
                     : "border-[var(--border)] hover:bg-[var(--surface-muted)]"
                 }`}
               >
-                {item.label}
+                {label}
               </button>
             ))}
           </div>
 
           {settings.backgroundMode === "solid" && (
-            <div className="mt-4 flex items-center gap-3 rounded-lg border border-[var(--border)] p-3">
-              <input
-                type="color"
+            <div className="mt-4">
+              <ColorField
+                label="Background color"
                 value={settings.background}
                 disabled={disabled}
-                onChange={(event) =>
+                onChange={(value) =>
                   onChange({
-                    background: event.target.value,
+                    background: value,
                   })
                 }
-                className="h-9 w-12 cursor-pointer rounded border-0 bg-transparent p-0"
               />
-
-              <div>
-                <p className="text-xs font-semibold">Color</p>
-
-                <p className="text-[10px] uppercase text-[var(--text-muted)]">
-                  {settings.background}
-                </p>
-              </div>
             </div>
           )}
 
           {settings.backgroundMode === "gradient" && (
             <div className="mt-4 space-y-4">
               <ColorField
-                label="Start"
+                label="Start color"
                 value={settings.gradientFrom}
                 disabled={disabled}
                 onChange={(value) =>
@@ -498,7 +382,7 @@ export default function EditorPanel({
               />
 
               <ColorField
-                label="End"
+                label="End color"
                 value={settings.gradientTo}
                 disabled={disabled}
                 onChange={(value) =>
@@ -509,7 +393,7 @@ export default function EditorPanel({
               />
 
               <Range
-                label="Gradient angle"
+                label="Angle"
                 value={settings.gradientAngle}
                 min={0}
                 max={360}
@@ -523,46 +407,39 @@ export default function EditorPanel({
               />
             </div>
           )}
-        </div>
+        </Accordion>
 
-        {/* SHAPE */}
-        <div>
-          <SectionTitle>Shape</SectionTitle>
-
-          <div className="mt-3 grid grid-cols-3 gap-2">
+        <Accordion
+          title="Shape"
+          description="Control the icon corners."
+          open={openSection === "shape"}
+          onToggle={() => toggle("shape")}
+        >
+          <div className="grid grid-cols-3 gap-2">
             {[
-              {
-                label: "Square",
-                value: 0,
-              },
-              {
-                label: "Rounded",
-                value: 20,
-              },
-              {
-                label: "Circle",
-                value: 50,
-              },
-            ].map((item) => (
+              ["Square", 0],
+              ["Rounded", 20],
+              ["Circle", 50],
+            ].map(([label, value]) => (
               <button
-                key={item.label}
+                key={String(label)}
                 type="button"
                 disabled={disabled}
                 onClick={() =>
                   onChange({
-                    borderRadius: item.value,
+                    borderRadius: Number(value),
                   })
                 }
-                className="rounded-lg border border-[var(--border)] px-2 py-2 text-xs font-medium hover:bg-[var(--surface-muted)]"
+                className="rounded-lg border border-[var(--border)] px-2 py-2.5 text-xs font-medium hover:bg-[var(--surface-muted)]"
               >
-                {item.label}
+                {label}
               </button>
             ))}
           </div>
 
           <div className="mt-4">
             <Range
-              label="Border radius"
+              label="Corner radius"
               value={settings.borderRadius}
               min={0}
               max={50}
@@ -575,13 +452,15 @@ export default function EditorPanel({
               suffix="%"
             />
           </div>
-        </div>
+        </Accordion>
 
-        {/* BORDER */}
-        <div>
-          <SectionTitle>Border</SectionTitle>
-
-          <div className="mt-4 space-y-4">
+        <Accordion
+          title="Border"
+          description="Add a clean outline around the icon."
+          open={openSection === "border"}
+          onToggle={() => toggle("border")}
+        >
+          <div className="space-y-4">
             <Range
               label="Width"
               value={settings.borderWidth}
@@ -607,12 +486,18 @@ export default function EditorPanel({
               }
             />
           </div>
-        </div>
+        </Accordion>
 
-        {/* SHADOW */}
-        <div>
+        <Accordion
+          title="Shadow"
+          description="Add depth without making the icon heavy."
+          open={openSection === "shadow"}
+          onToggle={() => toggle("shadow")}
+        >
           <div className="flex items-center justify-between">
-            <SectionTitle>Shadow</SectionTitle>
+            <span className="text-xs font-semibold text-[var(--text)]">
+              Enable shadow
+            </span>
 
             <button
               type="button"
@@ -635,7 +520,7 @@ export default function EditorPanel({
           </div>
 
           {settings.shadow && (
-            <div className="mt-4 space-y-4">
+            <div className="mt-5 space-y-4">
               <Range
                 label="Blur"
                 value={settings.shadowBlur}
@@ -665,7 +550,7 @@ export default function EditorPanel({
               />
 
               <Range
-                label="Horizontal"
+                label="Horizontal offset"
                 value={settings.shadowOffsetX}
                 min={-30}
                 max={30}
@@ -679,7 +564,7 @@ export default function EditorPanel({
               />
 
               <Range
-                label="Vertical"
+                label="Vertical offset"
                 value={settings.shadowOffsetY}
                 min={-30}
                 max={30}
@@ -693,7 +578,7 @@ export default function EditorPanel({
               />
             </div>
           )}
-        </div>
+        </Accordion>
       </div>
     </section>
   );
@@ -754,21 +639,26 @@ function ColorField({
   onChange: (value: string) => void;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-[var(--border)] p-3">
-      <input
-        type="color"
-        value={value}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-9 w-12 cursor-pointer rounded border-0 bg-transparent p-0"
-      />
+    <div className="rounded-xl border border-[var(--border)] p-3">
+      <div className="flex items-center gap-3">
+        <input
+          type="color"
+          value={value}
+          disabled={disabled}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-10 w-12 cursor-pointer rounded-lg border-0 bg-transparent p-0"
+        />
 
-      <div>
-        <p className="text-xs font-semibold text-[var(--text)]">{label}</p>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold text-[var(--text)]">{label}</p>
 
-        <p className="text-[10px] uppercase text-[var(--text-muted)]">
-          {value}
-        </p>
+          <input
+            value={value}
+            disabled={disabled}
+            onChange={(event) => onChange(event.target.value)}
+            className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--surface-muted)] px-2 py-1.5 font-mono text-[10px] uppercase text-[var(--text-secondary)] outline-none focus:border-[#6366F1]"
+          />
+        </div>
       </div>
     </div>
   );

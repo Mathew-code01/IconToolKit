@@ -8,11 +8,8 @@ interface UploadPanelProps {
   sourceFormat: string;
 
   onFileSelect: (file: File) => void;
-
   onRemove: () => void;
-
   onRemoveBackground: () => void;
-
   onResetImage: () => void;
 
   disabled?: boolean;
@@ -33,7 +30,7 @@ export default function UploadPanel({
   const [dragging, setDragging] = useState(false);
 
   const handleFiles = (files: FileList | null) => {
-    if (!files || files.length === 0) {
+    if (!files?.length) {
       return;
     }
 
@@ -58,13 +55,11 @@ export default function UploadPanel({
           <div className="flex items-center gap-2">
             <ImageIcon size={16} className="text-[#6366F1]" />
 
-            <h2 className="text-sm font-semibold text-[var(--text)]">
-              Source image
-            </h2>
+            <h2 className="text-sm font-semibold text-[var(--text)]">Source</h2>
           </div>
 
           <p className="mt-1 text-xs text-[var(--text-muted)]">
-            PNG, JPG, WebP, or SVG
+            Upload the image you want to turn into an icon.
           </p>
         </div>
 
@@ -82,33 +77,25 @@ export default function UploadPanel({
 
       {imageUrl ? (
         <div className="mt-4">
-          <div
-            className="
-              relative flex aspect-square
-              items-center justify-center
-              overflow-hidden rounded-xl
-              border border-[var(--border)]
-              bg-[var(--surface-muted)]
-            "
-          >
+          <div className="relative aspect-square overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]">
             <div
-              className="absolute inset-0 opacity-40"
+              className="absolute inset-0"
               style={{
                 backgroundImage: `
-                  linear-gradient(45deg, #888 25%, transparent 25%),
-                  linear-gradient(-45deg, #888 25%, transparent 25%),
-                  linear-gradient(45deg, transparent 75%, #888 75%),
-                  linear-gradient(-45deg, transparent 75%, #888 75%)
+                  linear-gradient(45deg, #aaa 25%, transparent 25%),
+                  linear-gradient(-45deg, #aaa 25%, transparent 25%),
+                  linear-gradient(45deg, transparent 75%, #aaa 75%),
+                  linear-gradient(-45deg, transparent 75%, #aaa 75%)
                 `,
                 backgroundSize: "16px 16px",
-                backgroundPosition: "0 0, 0 8px, 8px -8px, -8px 0px",
+                backgroundPosition: "0 0, 0 8px, 8px -8px, -8px 0",
               }}
             />
 
             <img
               src={imageUrl}
               alt={fileName}
-              className="relative z-10 max-h-full max-w-full object-contain p-5"
+              className="relative z-10 h-full w-full object-contain p-6"
             />
           </div>
 
@@ -125,7 +112,7 @@ export default function UploadPanel({
             </span>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-2">
+          <div className="mt-3 grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
@@ -140,7 +127,7 @@ export default function UploadPanel({
               onClick={onResetImage}
               className="rounded-lg border border-[var(--border)] px-3 py-2.5 text-xs font-medium hover:bg-[var(--surface-muted)]"
             >
-              Original
+              Reset edits
             </button>
           </div>
 
@@ -148,16 +135,11 @@ export default function UploadPanel({
             type="button"
             disabled={disabled}
             onClick={onRemoveBackground}
-            className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-[#6366F1] px-3 py-2.5 text-xs font-semibold text-white hover:bg-[#4F46E5] disabled:opacity-50"
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-[#6366F1]/30 bg-[#6366F1]/10 px-3 py-2.5 text-xs font-semibold text-[#6366F1] hover:bg-[#6366F1]/15 disabled:opacity-50"
           >
             <Sparkles size={14} />
             Remove simple background
           </button>
-
-          <p className="mt-2 text-[10px] leading-4 text-[var(--text-muted)]">
-            Works best with logos or images that have a mostly uniform
-            background.
-          </p>
         </div>
       ) : (
         <button
@@ -170,19 +152,17 @@ export default function UploadPanel({
           onDragLeave={() => setDragging(false)}
           onDrop={(event) => {
             event.preventDefault();
-
             setDragging(false);
-
             handleFiles(event.dataTransfer.files);
           }}
-          className={`mt-4 flex w-full flex-col items-center justify-center rounded-xl border border-dashed px-4 py-10 text-center transition ${
+          className={`mt-4 flex w-full flex-col items-center justify-center rounded-xl border border-dashed px-4 py-12 text-center transition ${
             dragging
               ? "border-[#6366F1] bg-[#6366F1]/10"
               : "border-[var(--border-strong)] hover:bg-[var(--surface-muted)]"
           }`}
         >
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#6366F1]/10 text-[#6366F1]">
-            <Upload size={19} />
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#6366F1]/10 text-[#6366F1]">
+            <Upload size={20} />
           </div>
 
           <span className="mt-4 text-sm font-semibold text-[var(--text)]">
@@ -190,10 +170,10 @@ export default function UploadPanel({
           </span>
 
           <span className="mt-1 text-xs text-[var(--text-muted)]">
-            or choose a file
+            PNG, JPG, WebP or SVG
           </span>
 
-          <span className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)]">
+          <span className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-xs font-medium">
             Choose image
           </span>
         </button>
@@ -206,7 +186,6 @@ export default function UploadPanel({
         className="hidden"
         onChange={(event) => {
           handleFiles(event.target.files);
-
           event.target.value = "";
         }}
       />

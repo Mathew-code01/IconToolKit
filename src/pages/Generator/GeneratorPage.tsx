@@ -49,7 +49,7 @@ export interface CropSettings {
   height: number;
 }
 
-export const DEFAULT_SETTINGS: EditorSettings = {
+const DEFAULT_SETTINGS: EditorSettings = {
   padding: 10,
   scale: 100,
 
@@ -95,25 +95,7 @@ function clamp(
   return Math.max(min, Math.min(max, value));
 }
 
-function hexToRgb(hex: string) {
-  const clean = hex.replace("#", "");
 
-  const value =
-    clean.length === 3
-      ? clean
-          .split("")
-          .map((char) => char + char)
-          .join("")
-      : clean;
-
-  const number = Number.parseInt(value, 16);
-
-  return {
-    r: (number >> 16) & 255,
-    g: (number >> 8) & 255,
-    b: number & 255,
-  };
-}
 
 function colorDistance(
   a: {
@@ -1461,10 +1443,8 @@ All image processing was performed locally in the browser.
             </h1>
 
             <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)] sm:text-base">
-              Crop, transform, style, preview,
-              and export production-ready
-              favicons and app icons directly
-              in your browser.
+              Crop, transform, style, preview, and export production-ready
+              favicons and app icons directly in your browser.
             </p>
 
             <div className="mt-4 flex flex-wrap gap-2 text-xs text-[var(--text-muted)]">
@@ -1498,118 +1478,60 @@ All image processing was performed locally in the browser.
               imageUrl={imageUrl}
               fileName={fileName}
               sourceFormat={sourceFormat}
-              onFileSelect={
-                handleFileSelect
-              }
-              onRemove={
-                handleRemoveImage
-              }
-              onRemoveBackground={
-                handleRemoveBackground
-              }
-              onResetImage={
-                resetImage
-              }
+              onFileSelect={handleFileSelect}
+              onRemove={handleRemoveImage}
+              onRemoveBackground={handleRemoveBackground}
+              onResetImage={resetImage}
               disabled={!image}
             />
 
             <EditorPanel
               settings={settings}
-              onChange={
-                updateSettings
-              }
+              imageUrl={imageUrl}
+              onChange={updateSettings}
               disabled={!image}
               onUndo={undo}
               onRedo={redo}
-              canUndo={
-                historyIndex >= 0
-              }
-              canRedo={
-                historyIndex <
-                history.length - 1
-              }
-              onRotateLeft={
-                rotateLeft
-              }
-              onRotateRight={
-                rotateRight
-              }
+              canUndo={historyIndex >= 0}
+              canRedo={historyIndex < history.length - 1}
+              onRotateLeft={rotateLeft}
+              onRotateRight={rotateRight}
             />
           </div>
 
           <div className="min-w-0">
             <PreviewPanel
-              imageUrl={
-                previewUrl
-              }
-              hasImage={
-                Boolean(image)
-              }
-              imageWidth={
-                image?.naturalWidth ??
-                0
-              }
-              imageHeight={
-                image?.naturalHeight ??
-                0
-              }
-              settings={
-                settings
-              }
+              imageUrl={previewUrl}
+              hasImage={Boolean(image)}
+              imageWidth={image?.naturalWidth ?? 0}
+              imageHeight={image?.naturalHeight ?? 0}
+              settings={settings}
             />
           </div>
 
           <div>
             <ExportPanel
-              fileName={
-                fileName
-              }
-              icons={
-                generatedIcons
-              }
+              fileName={fileName}
+              icons={generatedIcons}
               disabled={!image}
-              isGenerating={
-                isGenerating
-              }
-              svgContent={
-                svgContent
-              }
-              htmlSnippet={
-                htmlSnippet
-              }
-              manifestSnippet={
-                manifestSnippet
-              }
-              onGenerate={
-                generateIcons
-              }
-              onDownloadIcon={
-                handleDownloadIcon
-              }
-              onDownloadSvg={
-                handleDownloadSvg
-              }
-              onDownloadIco={
-                handleDownloadIco
-              }
-              onDownloadZip={
-                handleDownloadZip
-              }
+              isGenerating={isGenerating}
+              svgContent={svgContent}
+              htmlSnippet={htmlSnippet}
+              manifestSnippet={manifestSnippet}
+              onGenerate={generateIcons}
+              onDownloadIcon={handleDownloadIcon}
+              onDownloadSvg={handleDownloadSvg}
+              onDownloadIco={handleDownloadIco}
+              onDownloadZip={handleDownloadZip}
             />
           </div>
         </div>
 
         <div className="mt-8">
           <SizeGrid
-            icons={
-              generatedIcons
-            }
-            isGenerating={
-              isGenerating
-            }
-            onDownload={
-              handleDownloadIcon
-            }
+            icons={generatedIcons}
+            isGenerating={isGenerating}
+            onDownload={handleDownloadIcon}
           />
         </div>
       </section>
