@@ -1,5 +1,11 @@
 // src/pages/Generator/GeneratorPage.tsx
-import { useEffect, useMemo, useState } from "react";
+// src/pages/Generator/GeneratorPage.tsx
+
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import JSZip from "jszip";
 
 import UploadPanel from "./UploadPanel";
@@ -37,27 +43,21 @@ const ICO_SIZES = [
   256,
 ];
 
-export type BackgroundMode =
-  | "transparent"
-  | "solid"
-  | "gradient";
-
-export interface CropSettings {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
 const DEFAULT_SETTINGS: EditorSettings = {
   padding: 10,
   scale: 100,
 
-  backgroundMode: "transparent",
+  backgroundMode:
+    "transparent",
+
   background: "#ffffff",
 
-  gradientFrom: "#6366f1",
-  gradientTo: "#8b5cf6",
+  gradientFrom:
+    "#6366f1",
+
+  gradientTo:
+    "#8b5cf6",
+
   gradientAngle: 135,
 
   fit: "contain",
@@ -92,10 +92,11 @@ function clamp(
   min: number,
   max: number,
 ) {
-  return Math.max(min, Math.min(max, value));
+  return Math.max(
+    min,
+    Math.min(max, value),
+  );
 }
-
-
 
 function colorDistance(
   a: {
@@ -110,35 +111,40 @@ function colorDistance(
   },
 ) {
   return Math.sqrt(
-    Math.pow(a.r - b.r, 2) +
-      Math.pow(a.g - b.g, 2) +
-      Math.pow(a.b - b.b, 2),
+    Math.pow(
+      a.r - b.r,
+      2,
+    ) +
+      Math.pow(
+        a.g - b.g,
+        2,
+      ) +
+      Math.pow(
+        a.b - b.b,
+        2,
+      ),
   );
 }
 
-/**
- * Basic browser-only background remover.
- *
- * This is intentionally conservative:
- * it samples the corner colors and removes pixels
- * sufficiently close to those colors.
- *
- * It is useful for simple logos placed on a flat
- * background, but it is not a replacement for
- * ML segmentation.
- */
 async function removeSimpleBackground(
   image: HTMLImageElement,
 ): Promise<HTMLImageElement> {
-  const width = image.naturalWidth;
-  const height = image.naturalHeight;
+  const width =
+    image.naturalWidth;
 
-  const canvas = document.createElement("canvas");
+  const height =
+    image.naturalHeight;
+
+  const canvas =
+    document.createElement(
+      "canvas",
+    );
 
   canvas.width = width;
   canvas.height = height;
 
-  const context = canvas.getContext("2d");
+  const context =
+    canvas.getContext("2d");
 
   if (!context) {
     return image;
@@ -152,14 +158,16 @@ async function removeSimpleBackground(
     height,
   );
 
-  const imageData = context.getImageData(
-    0,
-    0,
-    width,
-    height,
-  );
+  const imageData =
+    context.getImageData(
+      0,
+      0,
+      width,
+      height,
+    );
 
-  const pixels = imageData.data;
+  const pixels =
+    imageData.data;
 
   const samplePoints = [
     [0, 0],
@@ -168,43 +176,57 @@ async function removeSimpleBackground(
     [width - 1, height - 1],
   ];
 
-  const backgroundColors = samplePoints.map(
-    ([x, y]) => {
-      const index =
-        (y * width + x) * 4;
+  const backgroundColors =
+    samplePoints.map(
+      ([x, y]) => {
+        const index =
+          (y * width + x) *
+          4;
 
-      return {
-        r: pixels[index],
-        g: pixels[index + 1],
-        b: pixels[index + 2],
-      };
-    },
-  );
+        return {
+          r: pixels[index],
+          g: pixels[
+            index + 1
+          ],
+          b: pixels[
+            index + 2
+          ],
+        };
+      },
+    );
 
   const threshold = 45;
 
   for (
     let index = 0;
-    index < pixels.length;
+    index <
+    pixels.length;
     index += 4
   ) {
     const pixel = {
       r: pixels[index],
-      g: pixels[index + 1],
-      b: pixels[index + 2],
+      g: pixels[
+        index + 1
+      ],
+      b: pixels[
+        index + 2
+      ],
     };
 
-    const matchesBackground =
+    const matches =
       backgroundColors.some(
         (background) =>
           colorDistance(
             pixel,
             background,
-          ) < threshold,
+          ) <
+          threshold,
       );
 
-    if (matchesBackground) {
-      pixels[index + 3] = 0;
+    if (matches) {
+      pixels[
+        index + 3
+      ] = 0;
     }
   }
 
@@ -214,17 +236,21 @@ async function removeSimpleBackground(
     0,
   );
 
-  const resultUrl =
-    canvas.toDataURL("image/png");
-
-  return await loadImage(resultUrl);
+  return loadImage(
+    canvas.toDataURL(
+      "image/png",
+    ),
+  );
 }
 
 function loadImage(
   source: string,
 ): Promise<HTMLImageElement> {
   return new Promise(
-    (resolve, reject) => {
+    (
+      resolve,
+      reject,
+    ) => {
       const image =
         new Image();
 
@@ -248,28 +274,104 @@ function getCropRect(
   const height =
     image.naturalHeight;
 
-  const x =
-    (settings.crop.x / 100) *
-    width;
-
-  const y =
-    (settings.crop.y / 100) *
-    height;
-
-  const cropWidth =
-    (settings.crop.width / 100) *
-    width;
-
-  const cropHeight =
-    (settings.crop.height / 100) *
-    height;
-
   return {
-    x,
-    y,
-    width: cropWidth,
-    height: cropHeight,
+    x:
+      (settings.crop.x /
+        100) *
+      width,
+
+    y:
+      (settings.crop.y /
+        100) *
+      height,
+
+    width:
+      (settings.crop.width /
+        100) *
+      width,
+
+    height:
+      (settings.crop.height /
+        100) *
+      height,
   };
+}
+
+function createRoundedPath(
+  context: CanvasRenderingContext2D,
+  size: number,
+  radius: number,
+) {
+  context.beginPath();
+
+  if (radius >= size / 2) {
+    context.arc(
+      size / 2,
+      size / 2,
+      size / 2,
+      0,
+      Math.PI * 2,
+    );
+
+    context.closePath();
+
+    return;
+  }
+
+  context.moveTo(
+    radius,
+    0,
+  );
+
+  context.lineTo(
+    size - radius,
+    0,
+  );
+
+  context.quadraticCurveTo(
+    size,
+    0,
+    size,
+    radius,
+  );
+
+  context.lineTo(
+    size,
+    size - radius,
+  );
+
+  context.quadraticCurveTo(
+    size,
+    size,
+    size - radius,
+    size,
+  );
+
+  context.lineTo(
+    radius,
+    size,
+  );
+
+  context.quadraticCurveTo(
+    0,
+    size,
+    0,
+    size - radius,
+  );
+
+  context.lineTo(
+    0,
+    radius,
+  );
+
+  context.quadraticCurveTo(
+    0,
+    0,
+    radius,
+    0,
+  );
+
+  context.closePath();
 }
 
 function drawIcon(
@@ -278,7 +380,9 @@ function drawIcon(
   settings: EditorSettings,
 ): string {
   const canvas =
-    document.createElement("canvas");
+    document.createElement(
+      "canvas",
+    );
 
   canvas.width = size;
   canvas.height = size;
@@ -296,9 +400,6 @@ function drawIcon(
   context.imageSmoothingQuality =
     "high";
 
-  /**
-   * Rounded clipping shape.
-   */
   const radius =
     (clamp(
       settings.borderRadius,
@@ -308,69 +409,21 @@ function drawIcon(
       100) *
     size;
 
+  /*
+   * Clip the entire icon surface.
+   */
   context.save();
 
-  context.beginPath();
+  createRoundedPath(
+    context,
+    size,
+    radius,
+  );
 
-  if (radius >= size / 2) {
-    context.arc(
-      size / 2,
-      size / 2,
-      size / 2,
-      0,
-      Math.PI * 2,
-    );
-  } else {
-    const r = radius;
-
-    context.moveTo(r, 0);
-    context.lineTo(size - r, 0);
-    context.quadraticCurveTo(
-      size,
-      0,
-      size,
-      r,
-    );
-
-    context.lineTo(
-      size,
-      size - r,
-    );
-
-    context.quadraticCurveTo(
-      size,
-      size,
-      size - r,
-      size,
-    );
-
-    context.lineTo(
-      r,
-      size,
-    );
-
-    context.quadraticCurveTo(
-      0,
-      size,
-      0,
-      size - r,
-    );
-
-    context.lineTo(0, r);
-
-    context.quadraticCurveTo(
-      0,
-      0,
-      r,
-      0,
-    );
-  }
-
-  context.closePath();
   context.clip();
 
-  /**
-   * Background
+  /*
+   * Background.
    */
   if (
     settings.backgroundMode ===
@@ -396,12 +449,12 @@ function drawIcon(
         Math.PI) /
       180;
 
-    const center =
-      size / 2;
-
     const length =
       size *
       Math.sqrt(2);
+
+    const center =
+      size / 2;
 
     const x1 =
       center -
@@ -452,18 +505,12 @@ function drawIcon(
     );
   }
 
-  /**
-   * Crop
-   */
   const crop =
     getCropRect(
       image,
       settings,
     );
 
-  /**
-   * Calculate source ratio.
-   */
   const sourceRatio =
     crop.width /
     crop.height;
@@ -481,7 +528,9 @@ function drawIcon(
     settings.fit ===
     "contain"
   ) {
-    if (sourceRatio > 1) {
+    if (
+      sourceRatio > 1
+    ) {
       drawHeight =
         drawWidth /
         sourceRatio;
@@ -496,7 +545,9 @@ function drawIcon(
     settings.fit ===
     "cover"
   ) {
-    if (sourceRatio > 1) {
+    if (
+      sourceRatio > 1
+    ) {
       drawWidth =
         drawHeight *
         sourceRatio;
@@ -508,29 +559,35 @@ function drawIcon(
   }
 
   const scale =
-    (settings.scale / 100) *
-    (settings.zoom / 100);
+    (settings.scale /
+      100) *
+    (settings.zoom /
+      100);
 
   drawWidth *= scale;
   drawHeight *= scale;
 
   const offsetX =
-    ((settings.positionX - 50) /
+    ((settings.positionX -
+      50) /
       100) *
     size;
 
   const offsetY =
-    ((settings.positionY - 50) /
+    ((settings.positionY -
+      50) /
       100) *
     size;
 
   const centerX =
-    size / 2 + offsetX;
+    size / 2 +
+    offsetX;
 
   const centerY =
-    size / 2 + offsetY;
+    size / 2 +
+    offsetY;
 
-  /**
+  /*
    * Shadow.
    */
   if (settings.shadow) {
@@ -550,9 +607,6 @@ function drawIcon(
       settings.shadowOffsetY;
   }
 
-  /**
-   * Rotate around center.
-   */
   context.save();
 
   context.translate(
@@ -580,10 +634,12 @@ function drawIcon(
 
   context.restore();
 
-  /**
+  /*
    * Border.
    */
-  if (settings.borderWidth > 0) {
+  if (
+    settings.borderWidth > 0
+  ) {
     context.shadowColor =
       "transparent";
 
@@ -591,6 +647,12 @@ function drawIcon(
 
     context.shadowOffsetX = 0;
     context.shadowOffsetY = 0;
+
+    createRoundedPath(
+      context,
+      size,
+      radius,
+    );
 
     context.strokeStyle =
       settings.borderColor;
@@ -612,7 +674,8 @@ function dataUrlToUint8Array(
   dataUrl: string,
 ) {
   const base64 =
-    dataUrl.split(",")[1] ?? "";
+    dataUrl.split(",")[1] ??
+    "";
 
   const binary =
     atob(base64);
@@ -624,11 +687,14 @@ function dataUrlToUint8Array(
 
   for (
     let index = 0;
-    index < binary.length;
+    index <
+    binary.length;
     index += 1
   ) {
     bytes[index] =
-      binary.charCodeAt(index);
+      binary.charCodeAt(
+        index,
+      );
   }
 
   return bytes;
@@ -658,7 +724,8 @@ function createIcoFile(
   const headerSize = 6;
 
   const directorySize =
-    16 * pngData.length;
+    16 *
+    pngData.length;
 
   let offset =
     headerSize +
@@ -667,7 +734,10 @@ function createIcoFile(
   const totalSize =
     offset +
     pngData.reduce(
-      (total, item) =>
+      (
+        total,
+        item,
+      ) =>
         total +
         item.bytes.length,
       0,
@@ -699,9 +769,12 @@ function createIcoFile(
     true,
   );
 
-  let directoryOffset = 6;
+  let directoryOffset =
+    6;
 
-  for (const item of pngData) {
+  for (
+    const item of pngData
+  ) {
     const dimension =
       item.size >= 256
         ? 0
@@ -764,7 +837,9 @@ function createIcoFile(
     headerSize +
     directorySize;
 
-  for (const item of pngData) {
+  for (
+    const item of pngData
+  ) {
     output.set(
       item.bytes,
       dataOffset,
@@ -786,27 +861,24 @@ function createSvgExport(
   image: HTMLImageElement,
   settings: EditorSettings,
 ): string {
-  const pngDataUrl =
+  /*
+   * This intentionally creates a valid SVG container.
+   *
+   * Since the editor accepts raster sources and applies
+   * raster transformations, embedding the rendered result
+   * is more accurate than pretending the output is a
+   * mathematically reconstructed vector.
+   */
+  const png =
     drawIcon(
       image,
       512,
       settings,
     );
 
-  return `
-<svg
-  xmlns="http://www.w3.org/2000/svg"
-  width="512"
-  height="512"
-  viewBox="0 0 512 512"
->
-  <image
-    href="${pngDataUrl}"
-    width="512"
-    height="512"
-  />
-</svg>
-`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <image href="${png}" width="512" height="512" preserveAspectRatio="none"/>
+</svg>`;
 }
 
 function downloadBlob(
@@ -835,10 +907,16 @@ function downloadBlob(
 
   anchor.remove();
 
-  URL.revokeObjectURL(
-    url,
+  window.setTimeout(
+    () =>
+      URL.revokeObjectURL(
+        url,
+      ),
+    1000,
   );
 }
+
+
 
 function downloadDataUrl(
   dataUrl: string,
@@ -849,41 +927,110 @@ function downloadDataUrl(
       dataUrl,
     );
 
-  const blob =
-    new Blob([bytes], {
-      type: "image/png",
-    });
-
   downloadBlob(
-    blob,
+    new Blob(
+      [bytes],
+      {
+        type: "image/png",
+      },
+    ),
     filename,
   );
 }
 
+function getExportFilename(
+  size: number,
+): string {
+  switch (size) {
+    case 16:
+      return "favicon-16x16.png";
+
+    case 32:
+      return "favicon-32x32.png";
+
+    case 192:
+      return "android-chrome-192x192.png";
+
+    case 512:
+      return "android-chrome-512x512.png";
+
+    case 180:
+      return "apple-touch-icon.png";
+
+    default:
+      return `icon-${size}x${size}.png`;
+  }
+}
+
+function createManifest(
+  siteName: string,
+  shortName: string,
+  description: string,
+) {
+  return JSON.stringify(
+    {
+      name: siteName || "My Website",
+
+      short_name: shortName || siteName || "My Website",
+
+      description: description || "",
+
+      start_url: "/",
+
+      scope: "/",
+
+      display: "standalone",
+
+      background_color: "#ffffff",
+
+      theme_color: "#6366f1",
+
+      icons: [
+        {
+          src: "/android-chrome-192x192.png",
+          sizes: "192x192",
+          type: "image/png",
+        },
+        {
+          src: "/android-chrome-512x512.png",
+          sizes: "512x512",
+          type: "image/png",
+        },
+      ],
+    },
+    null,
+    2,
+  );
+}
+
 export default function GeneratorPage() {
+  const [siteName, setSiteName] = useState("");
+
+  const [shortName, setShortName] = useState("");
+
+  const [description, setDescription] = useState(
+    "Your website, application or progressive web app.",
+  );
   const [
     imageUrl,
     setImageUrl,
-  ] =
-    useState<string | null>(
-      null,
-    );
+  ] = useState<
+    string | null
+  >(null);
 
   const [
     image,
     setImage,
-  ] =
-    useState<HTMLImageElement | null>(
-      null,
-    );
+  ] = useState<
+    HTMLImageElement | null
+  >(null);
 
   const [
     originalImage,
     setOriginalImage,
-  ] =
-    useState<HTMLImageElement | null>(
-      null,
-    );
+  ] = useState<
+    HTMLImageElement | null
+  >(null);
 
   const [
     fileName,
@@ -932,46 +1079,47 @@ export default function GeneratorPage() {
   const updateSettings = (
     updates: Partial<EditorSettings>,
   ) => {
-    setSettings((current) => {
-      const next = {
-        ...current,
-        ...updates,
-      };
+    setSettings(
+      (current) => {
+        const next = {
+          ...current,
+          ...updates,
+        };
 
-      setHistory((items) => {
-        const truncated =
-          historyIndex >= 0
-            ? items.slice(
-                0,
-                historyIndex + 1,
-              )
-            : items;
+        setHistory(
+          (items) => {
+            const truncated =
+              historyIndex >= 0
+                ? items.slice(
+                    0,
+                    historyIndex + 1,
+                  )
+                : items;
 
-        return [
-          ...truncated,
-          current,
-        ].slice(-30);
-      });
+            return [
+              ...truncated,
+              current,
+            ].slice(-30);
+          },
+        );
 
-      setHistoryIndex(
-        (index) =>
-          Math.min(
-            index + 1,
-            29,
-          ),
-      );
+        setHistoryIndex(
+          (index) =>
+            Math.min(
+              index + 1,
+              29,
+            ),
+        );
 
-      return next;
-    });
+        return next;
+      },
+    );
 
     setGeneratedIcons([]);
   };
 
   const undo = () => {
-    if (
-      historyIndex <
-      0
-    ) {
+    if (historyIndex < 0) {
       return;
     }
 
@@ -1012,7 +1160,6 @@ export default function GeneratorPage() {
     }
 
     setSettings(next);
-
     setHistoryIndex(
       nextIndex,
     );
@@ -1075,9 +1222,19 @@ export default function GeneratorPage() {
         )
         .trim();
 
-    setFileName(
-      cleanName || "icon",
-    );
+    const generatedName = cleanName || "icon";
+
+    setFileName(generatedName);
+
+    const generatedSiteName = generatedName
+      .replace(/[-_]+/g, " ")
+      .replace(/\b\w/g, (letter) => letter.toUpperCase());
+
+    setSiteName(generatedSiteName);
+
+    setShortName(generatedSiteName.slice(0, 18));
+
+    setDescription("Your website, application or progressive web app.");
 
     setSettings(
       DEFAULT_SETTINGS,
@@ -1099,17 +1256,16 @@ export default function GeneratorPage() {
       setImageUrl(null);
       setImage(null);
       setOriginalImage(null);
-
       setFileName("icon");
-
+      setSiteName("");
+      setShortName("");
+      setDescription("Your website, application or progressive web app.");
       setSourceFormat(
         "image/png",
       );
-
       setSettings(
         DEFAULT_SETTINGS,
       );
-
       setHistory([]);
       setHistoryIndex(-1);
       setGeneratedIcons([]);
@@ -1126,10 +1282,7 @@ export default function GeneratorPage() {
           image,
         );
 
-      setImage(
-        processed,
-      );
-
+      setImage(processed);
       setGeneratedIcons([]);
     };
 
@@ -1168,40 +1321,39 @@ export default function GeneratorPage() {
     });
   };
 
-  const generateIcons = () => {
-    if (!image) {
-      return;
-    }
+  const generateIcons =
+    () => {
+      if (!image) {
+        return;
+      }
 
-    setIsGenerating(
-      true,
-    );
+      setIsGenerating(true);
 
-    requestAnimationFrame(
-      () => {
-        const icons =
-          ICON_SIZES.map(
-            (size) => ({
-              size,
-              dataUrl:
-                drawIcon(
-                  image,
-                  size,
-                  settings,
-                ),
-            }),
+      requestAnimationFrame(
+        () => {
+          const icons =
+            ICON_SIZES.map(
+              (size) => ({
+                size,
+                dataUrl:
+                  drawIcon(
+                    image,
+                    size,
+                    settings,
+                  ),
+              }),
+            );
+
+          setGeneratedIcons(
+            icons,
           );
 
-        setGeneratedIcons(
-          icons,
-        );
-
-        setIsGenerating(
-          false,
-        );
-      },
-    );
-  };
+          setIsGenerating(
+            false,
+          );
+        },
+      );
+    };
 
   const previewUrl =
     useMemo(() => {
@@ -1234,62 +1386,60 @@ export default function GeneratorPage() {
       settings,
     ]);
 
+  const appName =
+    fileName
+      .replace(
+        /[-_]+/g,
+        " ",
+      )
+      .replace(
+        /\b\w/g,
+        (letter) =>
+          letter.toUpperCase(),
+      );
+
   const htmlSnippet =
-    useMemo(() => {
-      return `<link rel="icon" href="/icons/${fileName}-32x32.png" sizes="32x32">
-<link rel="icon" href="/icons/${fileName}-192x192.png" sizes="192x192">
-<link rel="icon" href="/icons/${fileName}-512x512.png" sizes="512x512">
-<link rel="icon" href="/icons/${fileName}.ico">
-<link rel="apple-touch-icon" href="/icons/${fileName}-180x180.png">`;
-    }, [fileName]);
-
-  const manifestSnippet =
-    useMemo(() => {
-      return JSON.stringify(
-        {
-          name: "Your App",
-          short_name:
-            "Your App",
-          icons: [
-            {
-              src: `/icons/${fileName}-192x192.png`,
-              sizes:
-                "192x192",
-              type: "image/png",
-            },
-            {
-              src: `/icons/${fileName}-512x512.png`,
-              sizes:
-                "512x512",
-              type: "image/png",
-            },
-          ],
-          display:
-            "standalone",
-        },
-        null,
-        2,
-      );
-    }, [fileName]);
-
-  const handleDownloadIcon = (
-    size: number,
-  ) => {
-    const icon =
-      generatedIcons.find(
-        (item) =>
-          item.size === size,
-      );
-
-    if (!icon) {
-      return;
-    }
-
-    downloadDataUrl(
-      icon.dataUrl,
-      `${fileName}-${size}x${size}.png`,
+    useMemo(
+      () =>
+        `<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.json">`,
+      [],
     );
-  };
+
+  const manifestSnippet = useMemo(
+    () =>
+      createManifest(
+        siteName || appName,
+
+        shortName || siteName || appName,
+
+        description,
+      ),
+    [siteName, shortName, description, appName],
+  );
+
+  const handleDownloadIcon =
+    (size: number) => {
+      const icon =
+        generatedIcons.find(
+          (item) =>
+            item.size === size,
+        );
+
+      if (!icon) {
+        return;
+      }
+
+      downloadDataUrl(
+        icon.dataUrl,
+        getExportFilename(
+          size,
+        ),
+      );
+    };
 
   const handleDownloadSvg =
     () => {
@@ -1301,7 +1451,8 @@ export default function GeneratorPage() {
         new Blob(
           [svgContent],
           {
-            type: "image/svg+xml",
+            type:
+              "image/svg+xml",
           },
         ),
         `${fileName}.svg`,
@@ -1321,7 +1472,7 @@ export default function GeneratorPage() {
         createIcoFile(
           generatedIcons,
         ),
-        `${fileName}.ico`,
+        "favicon.ico",
       );
     };
 
@@ -1338,19 +1489,64 @@ export default function GeneratorPage() {
       const zip =
         new JSZip();
 
-      const folder =
+      const root =
         zip.folder(
+          "icon-toolkit-export",
+        );
+
+      if (!root) {
+        return;
+      }
+
+      const publicFolder =
+        root.folder(
+          "public",
+        );
+
+      const iconsFolder =
+        publicFolder?.folder(
           "icons",
         );
 
-      if (!folder) {
+      if (!publicFolder) {
         return;
       }
 
       generatedIcons.forEach(
         (icon) => {
-          folder.file(
-            `${fileName}-${icon.size}x${icon.size}.png`,
+          const filename =
+            getExportFilename(
+              icon.size,
+            );
+
+          /*
+           * Standard files live directly
+           * inside public/.
+           */
+          if (
+            filename ===
+              "favicon-16x16.png" ||
+            filename ===
+              "favicon-32x32.png" ||
+            filename ===
+              "android-chrome-192x192.png" ||
+            filename ===
+              "android-chrome-512x512.png" ||
+            filename ===
+              "apple-touch-icon.png"
+          ) {
+            publicFolder.file(
+              filename,
+              dataUrlToUint8Array(
+                icon.dataUrl,
+              ),
+            );
+
+            return;
+          }
+
+          iconsFolder?.file(
+            filename,
             dataUrlToUint8Array(
               icon.dataUrl,
             ),
@@ -1358,51 +1554,59 @@ export default function GeneratorPage() {
         },
       );
 
+      if (
+        generatedIcons.length
+      ) {
+        publicFolder.file(
+          "favicon.ico",
+          new Uint8Array(
+            await createIcoFile(
+              generatedIcons,
+            ).arrayBuffer(),
+          ),
+        );
+      }
+
       if (svgContent) {
-        folder.file(
+        publicFolder.file(
           `${fileName}.svg`,
           svgContent,
         );
       }
 
-      if (
-        generatedIcons.length >
-        0
-      ) {
-        const ico =
-          createIcoFile(
-            generatedIcons,
-          );
-
-        folder.file(
-          `${fileName}.ico`,
-          new Uint8Array(
-            await ico.arrayBuffer(),
-          ),
-        );
-      }
-
-      zip.file(
-        "index.html-snippet.txt",
-        htmlSnippet,
-      );
-
-      zip.file(
+      root.file(
         "manifest.json",
         manifestSnippet,
       );
 
-      zip.file(
+      root.file(
+        "favicon-snippet.html",
+        htmlSnippet,
+      );
+
+      root.file(
         "README.txt",
         `Generated with IconToolkit.
 
-Included:
-- PNG icon sizes
-- SVG icon
-- ICO favicon
-- HTML favicon snippet
-- Web App Manifest
-- Apple touch icon
+Application:
+${siteName || appName}
+
+Short name:
+${shortName || siteName || appName}
+
+Description:
+${description}
+
+Production files:
+- public/favicon.ico
+- public/favicon-16x16.png
+- public/favicon-32x32.png
+- public/apple-touch-icon.png
+- public/android-chrome-192x192.png
+- public/android-chrome-512x512.png
+- public/icons/*
+- manifest.json
+- favicon-snippet.html
 
 All image processing was performed locally in the browser.
 `,
@@ -1411,6 +1615,11 @@ All image processing was performed locally in the browser.
       const blob =
         await zip.generateAsync({
           type: "blob",
+          compression:
+            "DEFLATE",
+          compressionOptions: {
+            level: 6,
+          },
         });
 
       downloadBlob(
@@ -1434,34 +1643,35 @@ All image processing was performed locally in the browser.
       <section className="border-b border-[var(--border)]">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)]">
-              Professional icon editor
+            <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] shadow-sm">
+              Professional icon studio
             </div>
 
-            <h1 className="mt-4 text-3xl font-bold tracking-[-0.03em] text-[var(--text)] sm:text-4xl">
-              Create your icon set.
+            <h1 className="mt-4 text-3xl font-bold tracking-[-0.04em] text-[var(--text)] sm:text-4xl">
+              Create a production-ready icon system.
             </h1>
 
             <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)] sm:text-base">
-              Crop, transform, style, preview, and export production-ready
-              favicons and app icons directly in your browser.
+              Crop precisely, transform visually, preview in real device
+              contexts, and export a complete favicon, PWA and app icon package.
             </p>
 
-            <div className="mt-4 flex flex-wrap gap-2 text-xs text-[var(--text-muted)]">
+            <div className="mt-5 flex flex-wrap gap-2">
               {[
-                "Browser-based",
-                "Crop",
-                "Transform",
-                "Backgrounds",
-                "Border radius",
-                "Shadows",
+                "Precision crop",
+                "Real device preview",
+                "PWA",
+                "Apple",
+                "Android",
+                "Favicon",
+                "ICO",
                 "PNG",
                 "SVG",
-                "ICO",
+                "ZIP",
               ].map((item) => (
                 <span
                   key={item}
-                  className="rounded-full border border-[var(--border)] px-3 py-1.5"
+                  className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-[10px] font-medium text-[var(--text-muted)]"
                 >
                   {item}
                 </span>
@@ -1472,12 +1682,15 @@ All image processing was performed locally in the browser.
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-[290px_minmax(0,1fr)_320px]">
+        <div className="grid gap-6 lg:grid-cols-[290px_minmax(0,1fr)_320px] lg:items-start">
+          {/* LEFT COLUMN — Upload + Editor */}
           <div className="space-y-6">
             <UploadPanel
               imageUrl={imageUrl}
               fileName={fileName}
               sourceFormat={sourceFormat}
+              imageWidth={image?.naturalWidth ?? 0}
+              imageHeight={image?.naturalHeight ?? 0}
               onFileSelect={handleFileSelect}
               onRemove={handleRemoveImage}
               onRemoveBackground={handleRemoveBackground}
@@ -1499,17 +1712,128 @@ All image processing was performed locally in the browser.
             />
           </div>
 
-          <div className="min-w-0">
-            <PreviewPanel
-              imageUrl={previewUrl}
-              hasImage={Boolean(image)}
-              imageWidth={image?.naturalWidth ?? 0}
-              imageHeight={image?.naturalHeight ?? 0}
-              settings={settings}
-            />
+          {/* CENTER COLUMN — Site Identity + Production Preview */}
+          <div className="min-w-0 space-y-6">
+            {/* Site Identity */}
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+              <div>
+                <h3 className="text-sm font-semibold text-[var(--text)]">
+                  Site identity
+                </h3>
+
+                <p className="mt-1 text-[10px] leading-4 text-[var(--text-muted)]">
+                  These values are used by browser tabs, PWA installation,
+                  mobile shortcuts and app-style previews.
+                </p>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {/* Site name */}
+                <div>
+                  <label
+                    htmlFor="site-name"
+                    className="text-[10px] font-semibold text-[var(--text)]"
+                  >
+                    Site name
+                  </label>
+
+                  <input
+                    id="site-name"
+                    type="text"
+                    value={siteName}
+                    onChange={(event) => setSiteName(event.target.value)}
+                    placeholder="My Website"
+                    maxLength={60}
+                    className="mt-1.5 h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 text-xs text-[var(--text)] outline-none transition focus:border-[#6366F1] focus:ring-2 focus:ring-[#6366F1]/10"
+                  />
+
+                  <p className="mt-1 text-[9px] text-[var(--text-muted)]">
+                    Full application/site name.
+                  </p>
+                </div>
+
+                {/* Short name */}
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label
+                      htmlFor="short-name"
+                      className="text-[10px] font-semibold text-[var(--text)]"
+                    >
+                      Short name
+                    </label>
+
+                    <span className="text-[9px] text-[var(--text-muted)]">
+                      {shortName.length}/18
+                    </span>
+                  </div>
+
+                  <input
+                    id="short-name"
+                    type="text"
+                    value={shortName}
+                    onChange={(event) =>
+                      setShortName(event.target.value.slice(0, 18))
+                    }
+                    placeholder="My Website"
+                    maxLength={18}
+                    className="mt-1.5 h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 text-xs text-[var(--text)] outline-none transition focus:border-[#6366F1] focus:ring-2 focus:ring-[#6366F1]/10"
+                  />
+
+                  <p className="mt-1 text-[9px] text-[var(--text-muted)]">
+                    Used where space is limited, such as installed shortcuts.
+                  </p>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label
+                      htmlFor="site-description"
+                      className="text-[10px] font-semibold text-[var(--text)]"
+                    >
+                      Description
+                    </label>
+
+                    <span className="text-[9px] text-[var(--text-muted)]">
+                      {description.length}/160
+                    </span>
+                  </div>
+
+                  <textarea
+                    id="site-description"
+                    value={description}
+                    onChange={(event) =>
+                      setDescription(event.target.value.slice(0, 160))
+                    }
+                    rows={3}
+                    placeholder="Describe your website or application..."
+                    className="mt-1.5 w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2 text-xs leading-5 text-[var(--text)] outline-none transition focus:border-[#6366F1] focus:ring-2 focus:ring-[#6366F1]/10"
+                  />
+
+                  <p className="mt-1 text-[9px] text-[var(--text-muted)]">
+                    Used by the PWA and installed-app preview.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Production Preview */}
+            <div className="min-w-0">
+              <PreviewPanel
+                imageUrl={previewUrl}
+                hasImage={Boolean(image)}
+                imageWidth={image?.naturalWidth ?? 0}
+                imageHeight={image?.naturalHeight ?? 0}
+                settings={settings}
+                siteName={siteName}
+                shortName={shortName}
+                description={description}
+              />
+            </div>
           </div>
 
-          <div>
+          {/* RIGHT COLUMN — Export */}
+          <div className="min-w-0">
             <ExportPanel
               fileName={fileName}
               icons={generatedIcons}
@@ -1527,6 +1851,7 @@ All image processing was performed locally in the browser.
           </div>
         </div>
 
+        {/* Generated Sizes */}
         <div className="mt-8">
           <SizeGrid
             icons={generatedIcons}

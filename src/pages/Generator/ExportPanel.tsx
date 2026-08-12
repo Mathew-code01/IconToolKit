@@ -1,12 +1,15 @@
 // src/pages/Generator/ExportPanel.tsx
+// src/pages/Generator/ExportPanel.tsx
+
 import {
   Archive,
   Check,
-  Copy,
+  Clipboard,
   Download,
   FileCode2,
   FileImage,
   FileJson,
+  FolderArchive,
   Loader2,
 } from "lucide-react";
 import { useState } from "react";
@@ -43,112 +46,176 @@ export default function ExportPanel({
   onDownloadIco,
   onDownloadZip,
 }: ExportPanelProps) {
-  const [copied, setCopied] = useState<string | null>(null);
+  const [copied, setCopied] =
+    useState<string | null>(null);
 
-  const hasIcons = icons.length > 0;
+  const hasIcons =
+    icons.length > 0;
 
-  const copy = async (value: string, type: string) => {
+  const copy = async (
+    value: string,
+    type: string,
+  ) => {
     try {
-      await navigator.clipboard.writeText(value);
+      await navigator.clipboard.writeText(
+        value,
+      );
 
       setCopied(type);
 
-      window.setTimeout(() => setCopied(null), 1500);
+      window.setTimeout(
+        () => setCopied(null),
+        1500,
+      );
     } catch {
-      // Clipboard may be unavailable.
+      // Clipboard unavailable.
     }
   };
 
   return (
     <section className="lg:sticky lg:top-6">
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#6366F1]">
-            Final step
+      <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
+        <div className="border-b border-[var(--border)] bg-gradient-to-br from-[#6366F1]/10 via-transparent to-transparent p-5">
+          <div className="flex items-center gap-2">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#6366F1] text-white shadow-sm">
+              <FolderArchive size={15} />
+            </span>
+
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#6366F1]">
+                Production export
+              </p>
+
+              <h2 className="mt-0.5 text-base font-bold text-[var(--text)]">
+                Ship your icon set
+              </h2>
+            </div>
+          </div>
+
+          <p className="mt-3 text-xs leading-5 text-[var(--text-secondary)]">
+            Generate correctly named browser, PWA, Apple and ICO assets in one production-ready package.
           </p>
 
-          <h2 className="mt-1 text-base font-semibold text-[var(--text)]">
-            Export your icon
-          </h2>
-
-          <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-            Generate once, then download any format you need.
-          </p>
+          <button
+            type="button"
+            onClick={onGenerate}
+            disabled={
+              disabled ||
+              isGenerating
+            }
+            className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#6366F1] px-4 py-3.5 text-xs font-bold text-white shadow-lg shadow-[#6366F1]/20 transition hover:bg-[#4F46E5] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isGenerating ? (
+              <>
+                <Loader2
+                  size={15}
+                  className="animate-spin"
+                />
+                Rendering assets…
+              </>
+            ) : (
+              <>
+                <FileImage size={15} />
+                {hasIcons
+                  ? "Regenerate production set"
+                  : "Generate production set"}
+              </>
+            )}
+          </button>
         </div>
 
-        <button
-          type="button"
-          onClick={onGenerate}
-          disabled={disabled || isGenerating}
-          className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#6366F1] px-4 py-3.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#4F46E5] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isGenerating ? (
-            <>
-              <Loader2 size={15} className="animate-spin" />
-              Generating icon set…
-            </>
-          ) : (
-            <>
-              <FileImage size={15} />
-              {hasIcons ? "Regenerate icon set" : "Generate icon set"}
-            </>
-          )}
-        </button>
-
         {hasIcons && (
-          <div className="mt-5">
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-              Downloads
-            </p>
+          <div className="p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+                Included assets
+              </p>
 
-            <div className="space-y-2">
+              <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-[9px] font-bold text-emerald-600">
+                {icons.length} PNG sizes
+              </span>
+            </div>
+
+            <div className="mt-3 space-y-2">
               <ExportButton
-                icon={<Download size={15} />}
-                title="PNG"
-                description={`${fileName}-32x32.png`}
-                onClick={() => onDownloadIcon(32)}
+                icon={
+                  <FileImage size={15} />
+                }
+                title="PNG icon set"
+                description={`${icons.length} production sizes`}
+                onClick={() =>
+                  onDownloadIcon(512)
+                }
               />
 
               <ExportButton
-                icon={<FileCode2 size={15} />}
+                icon={
+                  <FileCode2 size={15} />
+                }
                 title="SVG"
                 description={`${fileName}.svg`}
-                onClick={onDownloadSvg}
+                onClick={
+                  onDownloadSvg
+                }
                 disabled={!svgContent}
               />
 
               <ExportButton
-                icon={<FileImage size={15} />}
-                title="ICO"
-                description={`${fileName}.ico`}
-                onClick={onDownloadIco}
+                icon={
+                  <FileImage size={15} />
+                }
+                title="favicon.ico"
+                description="16×16 · 32×32 · 48×48 · 64×64 · 128×128 · 256×256"
+                onClick={
+                  onDownloadIco
+                }
               />
 
-              <ExportButton
-                icon={<Archive size={15} />}
-                title="Complete ZIP"
-                description="All icon sizes + web files"
+              <button
+                type="button"
                 onClick={onDownloadZip}
-              />
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--text)] px-3 py-3 text-xs font-bold text-[var(--background)] transition hover:opacity-90"
+              >
+                <Archive size={14} />
+                Download complete production ZIP
+              </button>
             </div>
           </div>
         )}
 
-        <div className="mt-5 space-y-3">
+        <div className="border-t border-[var(--border)] p-4">
           <CodeBox
-            title="HTML favicon"
-            icon={<FileCode2 size={14} />}
+            title="HTML"
+            icon={
+              <FileCode2 size={14} />
+            }
             value={htmlSnippet}
-            copied={copied === "html"}
-            onCopy={() => copy(htmlSnippet, "html")}
+            copied={
+              copied === "html"
+            }
+            onCopy={() =>
+              copy(
+                htmlSnippet,
+                "html",
+              )
+            }
           />
 
           <CodeBox
-            title="Web App Manifest"
-            icon={<FileJson size={14} />}
+            title="manifest.json"
+            icon={
+              <FileJson size={14} />
+            }
             value={manifestSnippet}
-            copied={copied === "manifest"}
-            onCopy={() => copy(manifestSnippet, "manifest")}
+            copied={
+              copied === "manifest"
+            }
+            onCopy={() =>
+              copy(
+                manifestSnippet,
+                "manifest",
+              )
+            }
           />
         </div>
       </div>
@@ -176,19 +243,24 @@ function ExportButton({
       disabled={disabled}
       className="flex w-full items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-3 text-left transition hover:bg-[var(--surface)] disabled:cursor-not-allowed disabled:opacity-40"
     >
-      <span className="text-[var(--text-secondary)]">{icon}</span>
+      <span className="text-[#6366F1]">
+        {icon}
+      </span>
 
       <span className="min-w-0 flex-1">
         <span className="block text-xs font-semibold text-[var(--text)]">
           {title}
         </span>
 
-        <span className="block truncate text-[10px] text-[var(--text-muted)]">
+        <span className="mt-0.5 block truncate text-[9px] text-[var(--text-muted)]">
           {description}
         </span>
       </span>
 
-      <Download size={13} className="text-[var(--text-muted)]" />
+      <Download
+        size={13}
+        className="text-[var(--text-muted)]"
+      />
     </button>
   );
 }
@@ -207,18 +279,20 @@ function CodeBox({
   onCopy: () => void;
 }) {
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-3">
+    <div className="mb-3 last:mb-0 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-3">
       <div className="flex items-center gap-2">
-        <span className="text-[#6366F1]">{icon}</span>
+        <span className="text-[#6366F1]">
+          {icon}
+        </span>
 
-        <span className="flex-1 text-xs font-semibold text-[var(--text)]">
+        <span className="flex-1 text-xs font-bold text-[var(--text)]">
           {title}
         </span>
 
         <button
           type="button"
           onClick={onCopy}
-          className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[10px] font-medium"
+          className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[9px] font-semibold"
         >
           {copied ? (
             <>
@@ -227,14 +301,14 @@ function CodeBox({
             </>
           ) : (
             <>
-              <Copy size={11} />
+              <Clipboard size={11} />
               Copy
             </>
           )}
         </button>
       </div>
 
-      <pre className="mt-3 max-h-28 overflow-auto whitespace-pre-wrap break-all text-[9px] leading-4 text-[var(--text-muted)]">
+      <pre className="mt-3 max-h-36 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-black/5 p-2.5 text-[9px] leading-4 text-[var(--text-muted)]">
         {value}
       </pre>
     </div>
