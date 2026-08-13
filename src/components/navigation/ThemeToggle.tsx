@@ -1,21 +1,22 @@
 // src/components/navigation/ThemeToggle.tsx
 
 // src/components/navigation/ThemeToggle.tsx
-
-import { useState } from "react";
 import { Moon, Sun } from "lucide-react";
+import { useEffect, useState } from "react";
 
 type Theme = "light" | "dark";
+
+const STORAGE_KEY = "icon-toolkit-theme";
 
 function getInitialTheme(): Theme {
   if (typeof window === "undefined") {
     return "light";
   }
 
-  const storedTheme = localStorage.getItem("icon-toolkit-theme");
+  const stored = localStorage.getItem(STORAGE_KEY);
 
-  if (storedTheme === "dark" || storedTheme === "light") {
-    return storedTheme;
+  if (stored === "dark" || stored === "light") {
+    return stored;
   }
 
   return window.matchMedia("(prefers-color-scheme: dark)").matches
@@ -26,40 +27,26 @@ function getInitialTheme(): Theme {
 export default function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
 
-  const dark = theme === "dark";
+  const isDark = theme === "dark";
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
+
+    localStorage.setItem(STORAGE_KEY, theme);
+  }, [isDark, theme]);
 
   const toggleTheme = () => {
-    const nextTheme: Theme = dark ? "light" : "dark";
-
-    setTheme(nextTheme);
-
-    document.documentElement.classList.toggle(
-      "dark",
-      nextTheme === "dark",
-    );
-
-    localStorage.setItem(
-      "icon-toolkit-theme",
-      nextTheme,
-    );
+    setTheme((current) => (current === "dark" ? "light" : "dark"));
   };
 
   return (
     <button
       type="button"
       onClick={toggleTheme}
-      aria-label={
-        dark
-          ? "Switch to light mode"
-          : "Switch to dark mode"
-      }
-      title={
-        dark
-          ? "Switch to light mode"
-          : "Switch to dark mode"
-      }
+      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
       className="
-        flex
+        inline-flex
         h-9
         w-9
         items-center
@@ -69,29 +56,22 @@ export default function ThemeToggle() {
         border-[var(--border)]
         bg-[var(--surface)]
         text-[var(--text-secondary)]
-        transition-colors
+        transition-all
         duration-200
         hover:border-[var(--border-strong)]
         hover:bg-[var(--surface-muted)]
         hover:text-[var(--text)]
+        active:scale-95
         focus-visible:outline-none
         focus-visible:ring-2
         focus-visible:ring-[#6366F1]
         focus-visible:ring-offset-2
       "
     >
-      {dark ? (
-        <Sun
-          size={17}
-          strokeWidth={2}
-          aria-hidden="true"
-        />
+      {isDark ? (
+        <Sun size={17} strokeWidth={1.9} aria-hidden="true" />
       ) : (
-        <Moon
-          size={17}
-          strokeWidth={2}
-          aria-hidden="true"
-        />
+        <Moon size={17} strokeWidth={1.9} aria-hidden="true" />
       )}
     </button>
   );

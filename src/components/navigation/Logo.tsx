@@ -1,38 +1,48 @@
 // src/components/navigation/Logo.tsx
 
-import type { AnchorHTMLAttributes } from "react";
+import { Link } from "react-router-dom";
 
-interface LogoProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
-  showTagline?: boolean;
-}
-
-export default function Logo({
-  showTagline = false,
-  className = "",
-  ...props
-}: LogoProps) {
+export default function Logo() {
   return (
-    <a
-      href="/"
+    <Link
+      to="/"
       aria-label="IconToolkit home"
-      className={`inline-flex items-center gap-2 ${className}`}
-      {...props}
+      className="
+        group
+        inline-flex
+        shrink-0
+        items-center
+        gap-2.5
+        rounded-lg
+        focus-visible:outline-none
+        focus-visible:ring-2
+        focus-visible:ring-[#6366F1]
+        focus-visible:ring-offset-2
+      "
     >
+      {/* Logo mark */}
       <span
         aria-hidden="true"
         className="
-          flex h-8 w-8
-          items-center justify-center
-          rounded-lg
+          flex
+          h-9
+          w-9
+          shrink-0
+          items-center
+          justify-center
+          rounded-[10px]
           bg-[#6366F1]
           text-white
-          shadow-[0_2px_8px_rgba(99,102,241,0.2)]
+          shadow-[0_3px_12px_rgba(99,102,241,0.20)]
+          transition-transform
+          duration-200
+          group-hover:scale-[1.03]
         "
       >
         <svg
           viewBox="0 0 24 24"
-          width="18"
-          height="18"
+          width="19"
+          height="19"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
@@ -43,6 +53,7 @@ export default function Logo({
             strokeLinecap="round"
             strokeLinejoin="round"
           />
+
           <path
             d="M14 8.5h3"
             stroke="currentColor"
@@ -52,25 +63,18 @@ export default function Logo({
         </svg>
       </span>
 
-      <span className="flex flex-col">
-        <span
-          className="
-            text-[17px]
-            font-semibold
-            leading-none
-            tracking-[-0.02em]
-            text-[var(--text)]
-          "
-        >
-          Icon<span className="text-[#6366F1]">Toolkit</span>
-        </span>
-
-        {showTagline && (
-          <span className="mt-1 text-[10px] font-medium text-[var(--text-muted)]">
-            Icon creation toolkit
-          </span>
-        )}
+      {/* Wordmark */}
+      <span
+        className="
+          text-[17px]
+          font-semibold
+          leading-none
+          tracking-[-0.025em]
+          text-[var(--text)]
+        "
+      >
+        Icon<span className="text-[#6366F1]">Toolkit</span>
       </span>
-    </a>
+    </Link>
   );
 }
