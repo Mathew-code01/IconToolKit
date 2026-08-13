@@ -8,21 +8,107 @@ type Props = {
   onUpdate: (id: string, updates: Partial<DesignObject>) => void;
 };
 
-const fonts = [
-  "Inter",
-  "Arial",
-  "Helvetica",
-  "Georgia",
-  "Times New Roman",
-  "Courier New",
+const FONT_GROUPS = [
+  {
+    label: "Sans Serif",
+    fonts: [
+      "Inter",
+      "Arial",
+      "Helvetica",
+      "Verdana",
+      "Tahoma",
+      "Trebuchet MS",
+      "Gill Sans",
+      "Calibri",
+      "Segoe UI",
+      "Century Gothic",
+      "Franklin Gothic Medium",
+      "Arial Narrow",
+      "Lucida Sans Unicode",
+    ],
+  },
+  {
+    label: "Modern / UI",
+    fonts: [
+      "Aptos",
+      "Roboto",
+      "Open Sans",
+      "Lato",
+      "Montserrat",
+      "Poppins",
+      "Nunito",
+      "Raleway",
+      "Work Sans",
+      "DM Sans",
+      "Manrope",
+      "Outfit",
+      "Plus Jakarta Sans",
+      "Space Grotesk",
+      "Urbanist",
+    ],
+  },
+  {
+    label: "Serif",
+    fonts: [
+      "Georgia",
+      "Times New Roman",
+      "Times",
+      "Garamond",
+      "Palatino",
+      "Book Antiqua",
+      "Baskerville",
+      "Didot",
+    ],
+  },
+  {
+    label: "Display",
+    fonts: [
+      "Impact",
+      "Haettenschweiler",
+      "Copperplate",
+      "Rockwell",
+      "Cooper Black",
+    ],
+  },
+  {
+    label: "Monospace",
+    fonts: [
+      "Courier New",
+      "Courier",
+      "Consolas",
+      "Monaco",
+      "Menlo",
+      "Lucida Console",
+    ],
+  },
 ];
+
+const INPUT_CLASS = `
+  h-9 w-full rounded-lg
+  border border-[var(--border)]
+  bg-[var(--background)]
+  px-2.5
+  text-[11px]
+  text-[var(--text)]
+  outline-none
+  transition-colors
+  focus:border-[var(--accent,#6366F1)]
+  focus:ring-2
+  focus:ring-[var(--accent,#6366F1)]/10
+`;
 
 export default function CreateTypographyPanel({ object, onUpdate }: Props) {
   return (
     <div className="border-t border-[var(--border)] pt-5">
-      <label className="mb-3 block text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-        Typography
-      </label>
+      <div className="mb-3 flex items-center justify-between">
+        <label className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+          Typography
+        </label>
+
+        <span className="font-mono text-[9px] text-[var(--text-muted)]">
+          TEXT
+        </span>
+      </div>
 
       <textarea
         value={object.text ?? ""}
@@ -31,8 +117,21 @@ export default function CreateTypographyPanel({ object, onUpdate }: Props) {
             text: event.target.value,
           })
         }
-        rows={2}
-        className="w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-xs text-[var(--text)] outline-none focus:border-[#6366F1]"
+        rows={3}
+        placeholder="Type something..."
+        className="
+          w-full resize-none rounded-lg
+          border border-[var(--border)]
+          bg-[var(--background)]
+          px-3 py-2.5
+          text-xs leading-5 text-[var(--text)]
+          outline-none
+          transition-colors
+          placeholder:text-[var(--text-muted)]
+          focus:border-[var(--accent,#6366F1)]
+          focus:ring-2
+          focus:ring-[var(--accent,#6366F1)]/10
+        "
       />
 
       <div className="mt-3">
@@ -47,14 +146,27 @@ export default function CreateTypographyPanel({ object, onUpdate }: Props) {
               fontFamily: event.target.value,
             })
           }
-          className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-2 text-xs text-[var(--text)] outline-none focus:border-[#6366F1]"
+          className={INPUT_CLASS}
         >
-          {fonts.map((font) => (
-            <option key={font} value={font}>
-              {font}
-            </option>
+          {FONT_GROUPS.map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.fonts.map((font) => (
+                <option key={font} value={font}>
+                  {font}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
+
+        <div
+          className="mt-2 truncate rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2 text-sm text-[var(--text)]"
+          style={{
+            fontFamily: object.fontFamily ?? "Inter",
+          }}
+        >
+          {object.text || "Aa Typography Preview"}
+        </div>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-3">
@@ -63,18 +175,27 @@ export default function CreateTypographyPanel({ object, onUpdate }: Props) {
             Size
           </span>
 
-          <input
-            type="number"
-            min={4}
-            max={300}
-            value={object.fontSize ?? 36}
-            onChange={(event) =>
-              onUpdate(object.id, {
-                fontSize: Number(event.target.value),
-              })
-            }
-            className="h-8 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-2 font-mono text-[10px] text-[var(--text)] outline-none focus:border-[#6366F1]"
-          />
+          <div className="relative">
+            <input
+              type="number"
+              min={4}
+              max={300}
+              value={object.fontSize ?? 36}
+              onChange={(event) =>
+                onUpdate(object.id, {
+                  fontSize: Math.min(
+                    300,
+                    Math.max(4, Number(event.target.value)),
+                  ),
+                })
+              }
+              className={`${INPUT_CLASS} pr-8 font-mono`}
+            />
+
+            <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] text-[var(--text-muted)]">
+              px
+            </span>
+          </div>
         </label>
 
         <label>
@@ -89,8 +210,9 @@ export default function CreateTypographyPanel({ object, onUpdate }: Props) {
                 fontWeight: Number(event.target.value),
               })
             }
-            className="h-8 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-2 text-[10px] text-[var(--text)] outline-none focus:border-[#6366F1]"
+            className={`${INPUT_CLASS} text-[10px]`}
           >
+            <option value={300}>Light</option>
             <option value={400}>Regular</option>
             <option value={500}>Medium</option>
             <option value={600}>Semibold</option>
@@ -109,13 +231,14 @@ export default function CreateTypographyPanel({ object, onUpdate }: Props) {
 
           <input
             type="number"
+            step="0.5"
             value={object.letterSpacing ?? 0}
             onChange={(event) =>
               onUpdate(object.id, {
                 letterSpacing: Number(event.target.value),
               })
             }
-            className="h-8 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-2 font-mono text-[10px] text-[var(--text)] outline-none focus:border-[#6366F1]"
+            className={`${INPUT_CLASS} font-mono`}
           />
         </label>
 
@@ -131,13 +254,46 @@ export default function CreateTypographyPanel({ object, onUpdate }: Props) {
                 textAlign: event.target.value as "left" | "center" | "right",
               })
             }
-            className="h-8 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-2 text-[10px] text-[var(--text)] outline-none focus:border-[#6366F1]"
+            className={`${INPUT_CLASS} text-[10px]`}
           >
             <option value="left">Left</option>
             <option value="center">Center</option>
             <option value="right">Right</option>
           </select>
         </label>
+      </div>
+
+      {/* Quick font sizes */}
+      <div className="mt-4">
+        <span className="mb-2 block text-[10px] text-[var(--text-muted)]">
+          Quick size
+        </span>
+
+        <div className="flex flex-wrap gap-1.5">
+          {[12, 16, 20, 24, 32, 48, 64, 96].map((size) => (
+            <button
+              key={size}
+              type="button"
+              onClick={() =>
+                onUpdate(object.id, {
+                  fontSize: size,
+                })
+              }
+              className={`
+                rounded-md border px-2 py-1.5
+                font-mono text-[9px]
+                transition-colors
+                ${
+                  object.fontSize === size
+                    ? "border-[var(--accent,#6366F1)] bg-[var(--accent,#6366F1)]/10 text-[var(--accent,#6366F1)]"
+                    : "border-[var(--border)] text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
+                }
+              `}
+            >
+              {size}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
