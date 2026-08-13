@@ -1,17 +1,35 @@
 // src/pages/Home/HeroSection.tsx
 
-
-// src/pages/Home/HeroSection.tsx
-
 import { useRef, useState } from "react";
-import { ArrowRight, FileImage, Globe, Upload } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  FileImage,
+  Globe,
+  Lock,
+  Sparkles,
+  Upload,
+} from "lucide-react";
+import { Link } from "react-router-dom";
+
 import IconSpecimenStrip from "./IconSpecimenStrip";
 
 const STATS = [
-  { value: "13", label: "sizes per export" },
-  { value: "0 KB", label: "uploaded to a server" },
-  { value: "100%", label: "free, no account" },
+  {
+    value: "13+",
+    label: "icon sizes",
+  },
+  {
+    value: "100%",
+    label: "browser-based",
+  },
+  {
+    value: "0",
+    label: "uploads required",
+  },
 ];
+
+const SUPPORTED_FORMATS = ["PNG", "JPG", "WEBP", "SVG"];
 
 export default function HeroSection() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -22,270 +40,533 @@ export default function HeroSection() {
       return;
     }
 
-    /*
-     * Temporary handoff to the Generator page.
-     * The Generator reads this value and loads the image on mount.
-     */
     const reader = new FileReader();
 
     reader.onload = () => {
-      if (typeof reader.result === "string") {
-        sessionStorage.setItem(
-          "icon-toolkit-pending-image",
-          reader.result,
-        );
-
-        sessionStorage.setItem(
-          "icon-toolkit-pending-image-name",
-          file.name,
-        );
-
-        window.location.href = "/generator";
+      if (typeof reader.result !== "string") {
+        return;
       }
+
+      sessionStorage.setItem("icon-toolkit-pending-image", reader.result);
+
+      sessionStorage.setItem("icon-toolkit-pending-image-name", file.name);
+
+      window.location.href = "/generator";
     };
 
     reader.readAsDataURL(file);
   };
 
-  const handleInputChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) handleFile(file);
+
+    if (file) {
+      handleFile(file);
+    }
+
+    event.target.value = "";
   };
 
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
+
     setDragging(false);
+
     const file = event.dataTransfer.files?.[0];
-    if (file) handleFile(file);
+
+    if (file) {
+      handleFile(file);
+    }
   };
 
   return (
-    <section className="relative overflow-hidden border-b border-[var(--border)] bg-[var(--background)]">
-      {/* Pixel-grid backdrop — faded to the edges, reinforces the "precision" identity */}
+    <section
+      className="
+        relative
+        overflow-hidden
+        border-b
+        border-[var(--border)]
+        bg-[var(--background)]
+      "
+    >
+      {/* Background grid */}
       <div
         aria-hidden="true"
         className="
           pointer-events-none
           absolute
           inset-0
-          opacity-[0.5]
-          [background-image:radial-gradient(var(--border)_1px,transparent_1px)]
-          [background-size:22px_22px]
-          [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,black_10%,transparent_75%)]
+          opacity-[0.45]
+          [background-image:linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)]
+          [background-size:48px_48px]
+          [mask-image:radial-gradient(ellipse_70%_60%_at_50%_20%,black,transparent_85%)]
         "
       />
 
-      <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8 lg:py-28">
-        <div className="mx-auto max-w-4xl">
-          {/* Eyebrow */}
-          <div className="flex justify-center">
-            <div
+      {/* Ambient glow */}
+      <div
+        aria-hidden="true"
+        className="
+          pointer-events-none
+          absolute
+          left-1/2
+          top-[-180px]
+          h-[420px]
+          w-[700px]
+          -translate-x-1/2
+          rounded-full
+          bg-[#6366F1]/[0.08]
+          blur-3xl
+        "
+      />
+
+      <div
+        className="
+          relative
+          mx-auto
+          max-w-[1440px]
+          px-4
+          pb-16
+          pt-14
+          sm:px-6
+          sm:pb-20
+          sm:pt-20
+          lg:px-8
+          lg:pb-28
+          lg:pt-24
+          xl:px-10
+        "
+      >
+        {/* Eyebrow */}
+        <div className="flex justify-center">
+          <div
+            className="
+              inline-flex
+              items-center
+              gap-2
+              rounded-full
+              border
+              border-[var(--border)]
+              bg-[var(--surface)]/90
+              px-3
+              py-1.5
+              shadow-sm
+              backdrop-blur
+            "
+          >
+            <span
               className="
-                inline-flex
+                flex
+                h-4
+                w-4
                 items-center
-                gap-2
+                justify-center
                 rounded-full
-                border
-                border-[var(--border)]
-                bg-[var(--surface)]
-                px-3
-                py-1.5
-                font-mono
-                text-[11px]
-                font-medium
+                bg-[#6366F1]/10
+                text-[#6366F1]
+              "
+            >
+              <Sparkles size={10} strokeWidth={2} aria-hidden="true" />
+            </span>
+
+            <span
+              className="
+                text-[10px]
+                font-semibold
                 uppercase
-                tracking-[0.08em]
+                tracking-[0.1em]
                 text-[var(--text-secondary)]
+                sm:text-[11px]
               "
             >
-              <span className="h-1.5 w-1.5 rounded-full bg-[#6366F1]" aria-hidden="true" />
-              [ Browser-based icon toolkit ]
-            </div>
+              Browser-first icon toolkit
+            </span>
           </div>
+        </div>
 
-          {/* Heading */}
-          <div className="text-center">
-            <h1
-              className="
-                mx-auto
-                mt-6
-                max-w-3xl
-                text-4xl
-                font-bold
-                tracking-[-0.04em]
-                text-[var(--text)]
-                sm:text-5xl
-                lg:text-6xl
-                lg:leading-[1.05]
-              "
-            >
-              The favicon workflow,
-              <span className="block text-[#6366F1]">done properly.</span>
-            </h1>
+        {/* Main heading */}
+        <div className="mx-auto mt-7 max-w-4xl text-center">
+          <h1
+            className="
+              text-4xl
+              font-bold
+              leading-[1.05]
+              tracking-[-0.045em]
+              text-[var(--text)]
+              sm:text-5xl
+              lg:text-6xl
+              xl:text-7xl
+            "
+          >
+            Create, edit, inspect, and
+            <span className="block text-[#6366F1]">ship better icons.</span>
+          </h1>
 
-            <p
-              className="
-                mx-auto
-                mt-5
-                max-w-2xl
-                text-base
-                leading-7
-                text-[var(--text-secondary)]
-                sm:text-lg
-                sm:leading-8
-              "
-            >
-              Upload a logo, generate every favicon, PWA, and app-icon size it
-              needs, preview each one in context, and export a package ready
-              to ship — entirely in your browser.
-            </p>
-          </div>
+          <p
+            className="
+              mx-auto
+              mt-6
+              max-w-2xl
+              text-base
+              leading-7
+              text-[var(--text-secondary)]
+              sm:text-lg
+              sm:leading-8
+            "
+          >
+            A professional browser-based toolkit for favicons, app icons, PWA
+            assets, conversions, optimization, previews, and developer-ready
+            exports.
+          </p>
+        </div>
 
-          {/* Upload */}
-          <div className="mx-auto mt-10 max-w-2xl">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/svg+xml"
-              onChange={handleInputChange}
-              className="hidden"
-            />
+        {/* Primary workflow */}
+        <div className="mx-auto mt-10 max-w-3xl sm:mt-12">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+            onChange={handleInputChange}
+            className="hidden"
+          />
 
+          <div
+            onDragOver={(event) => {
+              event.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={(event) => {
+              if (event.currentTarget === event.target) {
+                setDragging(false);
+              }
+            }}
+            onDrop={handleDrop}
+            className={`
+              relative
+              rounded-2xl
+              border
+              bg-[var(--surface)]
+              p-2
+              shadow-[0_20px_60px_rgba(0,0,0,0.06)]
+              transition-all
+              duration-200
+              sm:rounded-3xl
+              sm:p-3
+              ${
+                dragging
+                  ? "border-[#6366F1] bg-[#6366F1]/[0.04] shadow-[0_20px_70px_rgba(99,102,241,0.12)]"
+                  : "border-[var(--border)]"
+              }
+            `}
+          >
             <div
-              onDragOver={(event) => {
-                event.preventDefault();
-                setDragging(true);
-              }}
-              onDragLeave={() => setDragging(false)}
-              onDrop={handleDrop}
-              className={`
-                rounded-2xl
+              className="
+                rounded-xl
                 border
                 border-dashed
-                bg-[var(--surface)]
-                p-3
-                transition-colors
-                duration-200
-                ${dragging ? "border-[#6366F1] bg-[#6366F1]/5" : "border-[var(--border-strong)]"}
-              `}
+                border-[var(--border-strong)]
+                px-5
+                py-8
+                text-center
+                sm:rounded-2xl
+                sm:px-8
+                sm:py-10
+              "
             >
-              <div className="flex flex-col items-center justify-center rounded-xl px-6 py-10 text-center sm:py-12">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#6366F1]/10 text-[#6366F1]">
-                  <Upload size={21} strokeWidth={2} aria-hidden="true" />
-                </div>
-
-                <h2 className="mt-5 text-base font-semibold text-[var(--text)] sm:text-lg">
-                  Drop your image here
-                </h2>
-
-                <p className="mt-2 font-mono text-xs text-[var(--text-muted)]">
-                  PNG · JPG · WEBP · SVG — up to 10MB
-                </p>
-
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
+              <div className="mx-auto flex w-fit items-center gap-3">
+                <div
                   className="
-                    mt-6
-                    inline-flex
-                    h-10
+                    flex
+                    h-11
+                    w-11
                     items-center
                     justify-center
-                    gap-2
-                    rounded-lg
-                    bg-[#6366F1]
-                    px-5
-                    text-sm
-                    font-semibold
-                    text-white
-                    shadow-[0_4px_14px_rgba(99,102,241,0.2)]
-                    transition-all
-                    duration-200
-                    hover:bg-[#4F46E5]
-                    hover:shadow-[0_6px_18px_rgba(99,102,241,0.28)]
-                    active:translate-y-px
-                    focus-visible:outline-none
-                    focus-visible:ring-2
-                    focus-visible:ring-[#6366F1]
-                    focus-visible:ring-offset-2
+                    rounded-xl
+                    bg-[#6366F1]/10
+                    text-[#6366F1]
                   "
                 >
-                  <FileImage size={16} aria-hidden="true" />
-                  Choose an image
-                </button>
-              </div>
-            </div>
+                  <Upload size={20} strokeWidth={2} aria-hidden="true" />
+                </div>
 
-            <div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row sm:gap-3">
-              <a
-                href="/inspector"
+                <div className="text-left">
+                  <p
+                    className="
+                      text-sm
+                      font-semibold
+                      text-[var(--text)]
+                      sm:text-base
+                    "
+                  >
+                    Start with your logo
+                  </p>
+
+                  <p
+                    className="
+                      mt-0.5
+                      text-xs
+                      text-[var(--text-muted)]
+                    "
+                  >
+                    Drop an image here or choose a file
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
                 className="
+                  mt-7
                   inline-flex
-                  h-10
+                  h-11
                   items-center
                   justify-center
                   gap-2
-                  rounded-lg
-                  border
-                  border-[var(--border)]
-                  bg-[var(--surface)]
-                  px-4
+                  rounded-xl
+                  bg-[#6366F1]
+                  px-6
                   text-sm
-                  font-medium
-                  text-[var(--text)]
-                  transition-colors
+                  font-semibold
+                  text-white
+                  shadow-[0_5px_18px_rgba(99,102,241,0.22)]
+                  transition-all
                   duration-200
-                  hover:bg-[var(--surface-muted)]
+                  hover:bg-[#4F46E5]
+                  hover:shadow-[0_8px_24px_rgba(99,102,241,0.28)]
+                  active:translate-y-px
                   focus-visible:outline-none
                   focus-visible:ring-2
                   focus-visible:ring-[#6366F1]
                   focus-visible:ring-offset-2
                 "
               >
-                <Globe size={15} aria-hidden="true" />
-                Inspect a website
-                <ArrowRight size={14} aria-hidden="true" />
-              </a>
+                <FileImage size={16} aria-hidden="true" />
+                Choose an image
+                <ArrowRight size={15} aria-hidden="true" />
+              </button>
 
-              <span className="text-xs text-[var(--text-muted)]">
-                No account required
+              <div
+                className="
+                  mt-5
+                  flex
+                  flex-wrap
+                  items-center
+                  justify-center
+                  gap-x-3
+                  gap-y-1
+                  text-[10px]
+                  font-medium
+                  uppercase
+                  tracking-[0.08em]
+                  text-[var(--text-muted)]
+                "
+              >
+                {SUPPORTED_FORMATS.map((format, index) => (
+                  <span key={format} className="inline-flex items-center gap-3">
+                    {index > 0 && (
+                      <span
+                        aria-hidden="true"
+                        className="h-1 w-1 rounded-full bg-[var(--border-strong)]"
+                      />
+                    )}
+
+                    {format}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Secondary action */}
+          <div
+            className="
+              mt-4
+              flex
+              flex-col
+              items-center
+              justify-center
+              gap-3
+              sm:flex-row
+            "
+          >
+            <Link
+              to="/inspect"
+              className="
+                inline-flex
+                h-10
+                items-center
+                justify-center
+                gap-2
+                rounded-lg
+                border
+                border-[var(--border)]
+                bg-[var(--surface)]
+                px-4
+                text-sm
+                font-medium
+                text-[var(--text)]
+                transition-colors
+                hover:bg-[var(--surface-muted)]
+                focus-visible:outline-none
+                focus-visible:ring-2
+                focus-visible:ring-[#6366F1]
+                focus-visible:ring-offset-2
+              "
+            >
+              <Globe size={15} aria-hidden="true" />
+              Inspect a website
+              <ArrowRight size={14} aria-hidden="true" />
+            </Link>
+
+            <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+              <Lock size={12} aria-hidden="true" />
+              Files stay in your browser
+            </div>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div
+          className="
+            mx-auto
+            mt-12
+            grid
+            max-w-2xl
+            grid-cols-3
+            border-y
+            border-[var(--border)]
+            sm:mt-14
+          "
+        >
+          {STATS.map((stat) => (
+            <div
+              key={stat.label}
+              className="
+                border-r
+                border-[var(--border)]
+                px-3
+                py-5
+                text-center
+                last:border-r-0
+                sm:px-6
+                sm:py-6
+              "
+            >
+              <p
+                className="
+                  text-lg
+                  font-bold
+                  tracking-[-0.02em]
+                  text-[var(--text)]
+                  sm:text-xl
+                "
+              >
+                {stat.value}
+              </p>
+
+              <p
+                className="
+                  mt-1
+                  text-[10px]
+                  font-medium
+                  uppercase
+                  tracking-[0.06em]
+                  text-[var(--text-muted)]
+                  sm:text-[11px]
+                "
+              >
+                {stat.label}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Product preview */}
+        <div className="mx-auto mt-14 max-w-4xl sm:mt-16">
+          <div className="mb-4 flex items-center justify-between px-1">
+            <div>
+              <p
+                className="
+                  text-xs
+                  font-semibold
+                  text-[var(--text)]
+                "
+              >
+                Built for the complete workflow
+              </p>
+
+              <p
+                className="
+                  mt-1
+                  text-[11px]
+                  text-[var(--text-muted)]
+                "
+              >
+                Generate the sizes you need in one pass.
+              </p>
+            </div>
+
+            <div className="hidden items-center gap-1.5 sm:flex">
+              <Check size={13} className="text-[#6366F1]" aria-hidden="true" />
+
+              <span
+                className="
+                  text-[10px]
+                  font-medium
+                  text-[var(--text-muted)]
+                "
+              >
+                Local processing
               </span>
             </div>
           </div>
 
-          {/* Stats strip */}
           <div
             className="
-              mx-auto
-              mt-12
-              flex
-              max-w-lg
-              items-center
-              justify-center
-              divide-x
-              divide-[var(--border)]
+              overflow-hidden
+              rounded-2xl
+              border
+              border-[var(--border)]
+              bg-[var(--surface)]
+              shadow-[0_24px_70px_rgba(0,0,0,0.07)]
             "
           >
-            {STATS.map((stat) => (
-              <div key={stat.label} className="flex-1 px-4 text-center first:pl-0 last:pr-0">
-                <div className="font-mono text-lg font-semibold text-[var(--text)]">
-                  {stat.value}
-                </div>
-                <div className="mt-1 text-[11px] leading-tight text-[var(--text-muted)]">
-                  {stat.label}
-                </div>
+            {/* Fake application toolbar */}
+            <div
+              className="
+                flex
+                h-11
+                items-center
+                justify-between
+                border-b
+                border-[var(--border)]
+                px-4
+                sm:px-5
+              "
+            >
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-[var(--border-strong)]" />
+                <span className="h-2 w-2 rounded-full bg-[var(--border-strong)]" />
+                <span className="h-2 w-2 rounded-full bg-[var(--border-strong)]" />
               </div>
-            ))}
-          </div>
 
-          {/* Specimen strip — the signature motif, introduced here and echoed later */}
-          <div className="mx-auto mt-14 max-w-3xl">
-            <p className="text-center font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--text-muted)]">
-              Every size, generated locally
-            </p>
-            <div className="mt-5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-6 py-6">
+              <span
+                className="
+                  font-mono
+                  text-[9px]
+                  uppercase
+                  tracking-[0.08em]
+                  text-[var(--text-muted)]
+                "
+              >
+                icon toolkit / generator
+              </span>
+
+              <span className="w-10" />
+            </div>
+
+            <div className="px-5 py-6 sm:px-8 sm:py-8">
               <IconSpecimenStrip className="justify-center" />
             </div>
           </div>

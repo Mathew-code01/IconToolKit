@@ -1,23 +1,34 @@
 // src/pages/Home/HomePage.tsx
 
-
 // src/pages/Home/HomePage.tsx
 
 import HeroSection from "./HeroSection";
-import QuickStartSection from "./QuickStartSection";
-import ToolsSection from "./ToolsSection";
-import PreviewSection from "./PreviewSection";
+import ToolCategoriesSection from "./ToolCategoriesSection";
+import PopularToolsSection from "./PopularToolsSection";
+import GeneratorShowcaseSection from "./GeneratorShowcaseSection";
+import WorkflowSection from "./WorkflowSection";
+import WhyIconToolkitSection from "./WhyIconToolkitSection";
+import AllToolsSection from "./AllToolsSection";
 import FinalCTASection from "./FinalCTASection";
 
 export default function HomePage() {
   return (
-    <div className="w-full">
+    <>
       <HeroSection />
-      <QuickStartSection />
-      <ToolsSection />
-      <PreviewSection />
+
+      <ToolCategoriesSection />
+
+      <PopularToolsSection />
+
+      <GeneratorShowcaseSection />
+
+      <WorkflowSection />
+
+      <WhyIconToolkitSection />
+
+      <AllToolsSection />
+
       <FinalCTASection />
-    </div>
+    </>
   );
 }
-
