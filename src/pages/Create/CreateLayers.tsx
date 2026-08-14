@@ -81,13 +81,30 @@ export default function CreateLayers({
   onSendToBack,
 }: Props) {
   return (
-    <section className="border-t border-white/[0.07]">
+    <section className="border-t border-[var(--border)]">
       {/* =====================================================
           HEADER
       ====================================================== */}
-      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/[0.06] bg-[#15171d]/95 px-4 py-3 backdrop-blur-xl">
+      <div
+        className="
+  sticky top-0 z-10
+  flex items-center justify-between
+  border-b border-[var(--border)]
+  bg-[var(--editor-panel)]/95
+  px-4 py-3
+  backdrop-blur-xl
+"
+      >
         <div className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/[0.05] text-white/40">
+          <div
+            className="
+  flex h-7 w-7
+  items-center justify-center
+  rounded-lg
+  bg-[var(--surface-muted)]
+  text-[var(--text-muted)]
+"
+          >
             <Layers3 size={14} />
           </div>
 
@@ -147,8 +164,8 @@ export default function CreateLayers({
                     border px-1.5 transition-all
                     ${
                       selected
-                        ? "border-[#6366F1]/30 bg-[#6366F1]/10"
-                        : "border-transparent hover:border-white/[0.07] hover:bg-white/[0.035]"
+                        ? "border-[var(--brand)]/30 bg-[var(--brand)]/10"
+                        : "border-transparent hover:border-[var(--border)] hover:bg-[var(--surface-muted)]"
                     }
                   `}
               >
@@ -166,8 +183,8 @@ export default function CreateLayers({
                       rounded-lg text-xs font-medium transition
                       ${
                         selected
-                          ? "bg-[#6366F1]/20 text-[#a5b4fc]"
-                          : "bg-white/[0.04] text-white/35"
+                          ? "bg-[var(--brand)]/20 text-[var(--brand)]"
+                          : "bg-[var(--surface-muted)] text-[var(--text-muted)]"
                       }
                     `}
                 >
@@ -183,7 +200,11 @@ export default function CreateLayers({
                   <div
                     className={`
                         truncate text-[10px] font-medium
-                        ${selected ? "text-white" : "text-white/65"}
+                        ${
+                          selected
+                            ? "text-[var(--text)]"
+                            : "text-[var(--text-secondary)]"
+                        }
                       `}
                   >
                     {object.name}
@@ -267,13 +288,22 @@ export default function CreateLayers({
           LAYER FOOTER
       ====================================================== */}
       {selectedId && (
-        <div className="border-t border-white/[0.06] px-3 py-2">
+        <div className="border-t border-[var(--border)] px-3 py-2">
           <div className="flex items-center gap-1">
             {onBringToFront && (
               <button
                 type="button"
                 onClick={() => onBringToFront(selectedId)}
-                className="flex-1 rounded-lg bg-white/[0.035] px-2 py-1.5 text-[9px] text-white/35 transition hover:bg-white/[0.06] hover:text-white"
+                className="
+  flex-1 rounded-lg
+  bg-[var(--surface-muted)]
+  px-2 py-1.5
+  text-[9px]
+  text-[var(--text-muted)]
+  transition
+  hover:bg-[var(--surface)]
+  hover:text-[var(--text)]
+"
               >
                 Bring front
               </button>
@@ -283,7 +313,16 @@ export default function CreateLayers({
               <button
                 type="button"
                 onClick={() => onSendToBack(selectedId)}
-                className="flex-1 rounded-lg bg-white/[0.035] px-2 py-1.5 text-[9px] text-white/35 transition hover:bg-white/[0.06] hover:text-white"
+                className="
+  flex-1 rounded-lg
+  bg-[var(--surface-muted)]
+  px-2 py-1.5
+  text-[9px]
+  text-[var(--text-muted)]
+  transition
+  hover:bg-[var(--surface)]
+  hover:text-[var(--text)]
+"
               >
                 Send back
               </button>

@@ -430,7 +430,7 @@ export default function CreateCanvas({
                         ...selectionStyle,
                         overflow: "hidden",
                         borderRadius: object.radius * scale,
-                        background: "#f3f4f6",
+                        background: "var(--surface-muted)",
                       }}
                       onClick={(event) => {
                         event.stopPropagation();
