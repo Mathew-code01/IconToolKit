@@ -448,7 +448,14 @@ export default function CreateCanvas({
                           className="h-full w-full object-contain"
                         />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center text-[10px] text-gray-400">
+                        <div
+                          className="
+  flex h-full w-full
+  items-center justify-center
+  text-[10px]
+  text-[var(--text-muted)]
+"
+                        >
                           Image
                         </div>
                       )}
