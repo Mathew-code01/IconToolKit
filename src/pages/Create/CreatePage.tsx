@@ -215,6 +215,19 @@ export default function CreatePage() {
     [objects, selectedId],
   );
 
+  const handleSelectObject = useCallback((id: string | null) => {
+    setSelectedId(id);
+
+    if (!id) {
+      setPropertiesOpen(false);
+      return;
+    }
+
+    if (window.innerWidth < 1280) {
+      setPropertiesOpen(true);
+    }
+  }, []);
+
   /*
    * Apply theme to the document.
    *
@@ -250,16 +263,7 @@ export default function CreatePage() {
    * If an object is selected on a smaller screen,
    * automatically reveal the properties drawer.
    */
-  useEffect(() => {
-    if (!selectedId) {
-      setPropertiesOpen(false);
-      return;
-    }
-
-    if (window.innerWidth < 1280) {
-      setPropertiesOpen(true);
-    }
-  }, [selectedId]);
+ 
 
   /*
    * Commit object changes.
@@ -855,15 +859,12 @@ export default function CreatePage() {
                 md:flex
               "
             >
-              <span>
-                {objects.length} layers
-              </span>
+              <span>{objects.length} layers</span>
 
               <span>•</span>
 
               <span>
-                {canvasSize.width} ×{" "}
-                {canvasSize.height}
+                {canvasSize.width} × {canvasSize.height}
               </span>
             </div>
           </div>
@@ -936,9 +937,7 @@ export default function CreatePage() {
                 type="button"
                 title="Open properties"
                 aria-label="Open properties"
-                onClick={() =>
-                  setPropertiesOpen(true)
-                }
+                onClick={() => setPropertiesOpen(true)}
                 className="
                   flex h-8 w-8
                   items-center justify-center
@@ -985,11 +984,7 @@ export default function CreatePage() {
                 hover:text-[var(--text)]
               "
             >
-              {theme === "dark" ? (
-                <Sun size={15} />
-              ) : (
-                <Moon size={15} />
-              )}
+              {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
             </button>
 
             <CreateExport
@@ -1048,7 +1043,7 @@ export default function CreatePage() {
             canvasSize={canvasSize}
             objects={objects}
             selectedId={selectedId}
-            setSelectedId={setSelectedId}
+            setSelectedId={handleSelectObject}
             activeTool={activeTool}
             setActiveTool={setActiveTool}
             addObject={addObject}
@@ -1093,12 +1088,8 @@ export default function CreatePage() {
               onMove={moveLayer}
               onUpdate={updateObject}
               onDelete={deleteObject}
-              onBringToFront={
-                bringToFront
-              }
-              onSendToBack={
-                sendToBack
-              }
+              onBringToFront={bringToFront}
+              onSendToBack={sendToBack}
             />
           </div>
 
@@ -1110,12 +1101,8 @@ export default function CreatePage() {
             "
           >
             <CreateHistory
-              canUndo={
-                history.length > 0
-              }
-              canRedo={
-                future.length > 0
-              }
+              canUndo={history.length > 0}
+              canRedo={future.length > 0}
               onUndo={undo}
               onRedo={redo}
               onReset={resetDesign}
@@ -1153,9 +1140,7 @@ export default function CreatePage() {
           {selectedObject && (
             <button
               type="button"
-              onClick={() =>
-                setPropertiesOpen(true)
-              }
+              onClick={() => setPropertiesOpen(true)}
               className="
                 ml-1 flex h-10
                 items-center gap-2
@@ -1174,9 +1159,7 @@ export default function CreatePage() {
             >
               <PanelRight size={15} />
 
-              <span className="hidden sm:inline">
-                Properties
-              </span>
+              <span className="hidden sm:inline">Properties</span>
             </button>
           )}
 
@@ -1184,9 +1167,7 @@ export default function CreatePage() {
 
           <button
             type="button"
-            onClick={() =>
-              setLayersOpen(true)
-            }
+            onClick={() => setLayersOpen(true)}
             className="
               ml-1 flex h-10
               items-center justify-center
@@ -1225,9 +1206,7 @@ export default function CreatePage() {
           <button
             type="button"
             aria-label="Close properties"
-            onClick={() =>
-              setPropertiesOpen(false)
-            }
+            onClick={() => setPropertiesOpen(false)}
             className="
               absolute inset-0
               bg-black/40
@@ -1291,9 +1270,7 @@ export default function CreatePage() {
 
               <button
                 type="button"
-                onClick={() =>
-                  setPropertiesOpen(false)
-                }
+                onClick={() => setPropertiesOpen(false)}
                 className="
                   flex h-8 w-8
                   items-center
@@ -1344,9 +1321,7 @@ export default function CreatePage() {
             >
               <button
                 type="button"
-                onClick={() =>
-                  setPropertiesOpen(false)
-                }
+                onClick={() => setPropertiesOpen(false)}
                 className="
                   flex h-9 w-full
                   items-center
@@ -1381,9 +1356,7 @@ export default function CreatePage() {
           <button
             type="button"
             aria-label="Close layers"
-            onClick={() =>
-              setLayersOpen(false)
-            }
+            onClick={() => setLayersOpen(false)}
             className="
               absolute inset-0
               bg-black/40
@@ -1437,9 +1410,7 @@ export default function CreatePage() {
 
               <button
                 type="button"
-                onClick={() =>
-                  setLayersOpen(false)
-                }
+                onClick={() => setLayersOpen(false)}
                 className="
                   flex h-8 w-8
                   items-center justify-center
@@ -1471,12 +1442,8 @@ export default function CreatePage() {
                 onMove={moveLayer}
                 onUpdate={updateObject}
                 onDelete={deleteObject}
-                onBringToFront={
-                  bringToFront
-                }
-                onSendToBack={
-                  sendToBack
-                }
+                onBringToFront={bringToFront}
+                onSendToBack={sendToBack}
               />
             </div>
           </aside>
