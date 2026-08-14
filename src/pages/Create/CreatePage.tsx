@@ -1084,7 +1084,7 @@ export default function CreatePage() {
             <CreateLayers
               objects={objects}
               selectedId={selectedId}
-              onSelect={setSelectedId}
+              onSelect={(id) => handleSelectObject(id)}
               onMove={moveLayer}
               onUpdate={updateObject}
               onDelete={deleteObject}
@@ -1435,9 +1435,8 @@ export default function CreatePage() {
                 objects={objects}
                 selectedId={selectedId}
                 onSelect={(id) => {
-                  setSelectedId(id);
+                  handleSelectObject(id);
                   setLayersOpen(false);
-                  setPropertiesOpen(true);
                 }}
                 onMove={moveLayer}
                 onUpdate={updateObject}
