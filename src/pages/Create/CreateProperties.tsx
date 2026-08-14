@@ -9,9 +9,7 @@ import CreateTransformPanel from "./CreateTransformPanel";
 
 type Props = {
   object: DesignObject | null;
-
   onUpdate: (id: string, updates: Partial<DesignObject>) => void;
-
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
 };
@@ -62,7 +60,6 @@ export default function CreateProperties({
 
   return (
     <section className="border-b border-[var(--border)]">
-      {/* Header */}
       <div className="flex items-center justify-between px-5 py-4">
         <div className="min-w-0">
           <div className="text-xs font-semibold text-[var(--text)]">
@@ -75,7 +72,7 @@ export default function CreateProperties({
             </span>
 
             {object.locked && (
-              <span className="rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[9px] text-amber-600">
+              <span className="rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[9px] text-amber-600 dark:text-amber-400">
                 Locked
               </span>
             )}
@@ -117,9 +114,7 @@ export default function CreateProperties({
         </div>
       </div>
 
-      {/* Property content */}
       <div className="space-y-5 px-5 pb-5">
-        {/* Layer name */}
         <div>
           <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
             Layer name
@@ -140,9 +135,9 @@ export default function CreateProperties({
               text-[var(--text)]
               outline-none
               transition-colors
-              focus:border-[var(--accent,#6366F1)]
+              focus:border-[var(--brand)]
               focus:ring-2
-              focus:ring-[var(--accent,#6366F1)]/10
+              focus:ring-[var(--brand-ring)]
             "
           />
         </div>

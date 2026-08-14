@@ -19,9 +19,9 @@ const INPUT_CLASS = `
   text-[var(--text)]
   outline-none
   transition-colors
-  focus:border-[var(--accent,#6366F1)]
+  focus:border-[var(--brand)]
   focus:ring-2
-  focus:ring-[var(--accent,#6366F1)]/10
+  focus:ring-[var(--brand-ring)]
 `;
 
 export default function CreateTransformPanel({ object, onUpdate }: Props) {

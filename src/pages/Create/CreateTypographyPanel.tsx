@@ -92,9 +92,9 @@ const INPUT_CLASS = `
   text-[var(--text)]
   outline-none
   transition-colors
-  focus:border-[var(--accent,#6366F1)]
+  focus:border-[var(--brand)]
   focus:ring-2
-  focus:ring-[var(--accent,#6366F1)]/10
+  focus:ring-[var(--brand-ring)]
 `;
 
 export default function CreateTypographyPanel({ object, onUpdate }: Props) {
@@ -124,13 +124,14 @@ export default function CreateTypographyPanel({ object, onUpdate }: Props) {
           border border-[var(--border)]
           bg-[var(--background)]
           px-3 py-2.5
-          text-xs leading-5 text-[var(--text)]
+          text-xs leading-5
+          text-[var(--text)]
           outline-none
           transition-colors
           placeholder:text-[var(--text-muted)]
-          focus:border-[var(--accent,#6366F1)]
+          focus:border-[var(--brand)]
           focus:ring-2
-          focus:ring-[var(--accent,#6366F1)]/10
+          focus:ring-[var(--brand-ring)]
         "
       />
 
@@ -160,7 +161,13 @@ export default function CreateTypographyPanel({ object, onUpdate }: Props) {
         </select>
 
         <div
-          className="mt-2 truncate rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2 text-sm text-[var(--text)]"
+          className="
+            mt-2 truncate rounded-lg
+            border border-[var(--border)]
+            bg-[var(--surface-muted)]
+            px-3 py-2
+            text-sm text-[var(--text)]
+          "
           style={{
             fontFamily: object.fontFamily ?? "Inter",
           }}
@@ -263,7 +270,6 @@ export default function CreateTypographyPanel({ object, onUpdate }: Props) {
         </label>
       </div>
 
-      {/* Quick font sizes */}
       <div className="mt-4">
         <span className="mb-2 block text-[10px] text-[var(--text-muted)]">
           Quick size
@@ -285,7 +291,7 @@ export default function CreateTypographyPanel({ object, onUpdate }: Props) {
                 transition-colors
                 ${
                   object.fontSize === size
-                    ? "border-[var(--accent,#6366F1)] bg-[var(--accent,#6366F1)]/10 text-[var(--accent,#6366F1)]"
+                    ? "border-[var(--brand)] bg-[var(--brand-light)] text-[var(--brand)]"
                     : "border-[var(--border)] text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
                 }
               `}

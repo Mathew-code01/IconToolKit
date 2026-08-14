@@ -98,12 +98,20 @@ export default function CreateCanvas({
       ====================================================== */}
       <div
         className="
-          absolute left-1/2 top-4 z-40
-          flex -translate-x-1/2 items-center gap-1
-          rounded-xl border border-[var(--border)]
-          bg-[var(--surface)]/95 p-1
-          shadow-xl backdrop-blur-xl
-        "
+    absolute left-1/2 top-3 z-40
+    flex max-w-[calc(100%-1rem)]
+    -translate-x-1/2
+    items-center gap-0.5
+    overflow-x-auto
+    rounded-xl
+    border border-[var(--border)]
+    bg-[var(--surface)]/95
+    p-1
+    shadow-xl
+    backdrop-blur-xl
+    sm:top-4
+    sm:gap-1
+  "
       >
         <button
           type="button"
@@ -111,7 +119,7 @@ export default function CreateCanvas({
           aria-label="Select tool"
           onClick={() => setActiveTool("select")}
           className={`
-            flex h-8 w-8 items-center justify-center rounded-lg
+            flex h-8 w-8 shrink-0 items-center justify-center rounded-lg
             transition-colors
             ${
               activeTool === "select"
@@ -216,12 +224,19 @@ export default function CreateCanvas({
           ${isHandTool ? "cursor-grab active:cursor-grabbing" : ""}
         `}
         style={{
-          backgroundColor: "var(--canvas-workspace, #0c0e13)",
+          backgroundColor: "var(--editor-workspace)",
           backgroundImage: `
-            linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)
-          `,
-          backgroundSize: "24px 24px",
+    linear-gradient(
+      var(--editor-grid) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      var(--editor-grid) 1px,
+      transparent 1px
+    )
+  `,
+          backgroundSize: "var(--editor-grid-size) var(--editor-grid-size)",
         }}
       >
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.18)_100%)]" />
@@ -230,10 +245,16 @@ export default function CreateCanvas({
             DESIGN AREA
         ==================================================== */}
         <div
-          className="relative flex min-h-full min-w-full items-center justify-center p-24"
+          className="relative flex min-h-full min-w-full items-center justify-center p-6 sm:p-12 lg:p-20"
           style={{
-            minWidth: Math.max(900, canvasWidth + 240),
-            minHeight: Math.max(700, canvasHeight + 240),
+            minWidth: Math.max(
+              0,
+              canvasWidth + (window.innerWidth < 640 ? 48 : 160),
+            ),
+            minHeight: Math.max(
+              0,
+              canvasHeight + (window.innerWidth < 640 ? 48 : 160),
+            ),
           }}
           onClick={handleCanvasClick}
         >
@@ -245,10 +266,16 @@ export default function CreateCanvas({
               height: canvasHeight,
             }}
           >
-            <div className="absolute -inset-3 rounded-[4px] bg-black/20 blur-xl" />
-
             <div
-              className="relative h-full w-full overflow-hidden rounded-[2px] border border-black/20 shadow-[0_30px_80px_rgba(0,0,0,0.35)]"
+              className="
+    absolute -inset-3
+    rounded-[4px]
+    bg-[var(--editor-shadow)]
+    blur-xl
+  "
+            />
+            <div
+              className="relative h-full w-full overflow-hidden rounded-[2px] border border-black/20 shadow-[0_30px_80px_var(--editor-shadow)]"
               style={backgroundStyle}
               onClick={(event) => {
                 event.stopPropagation();
@@ -258,10 +285,15 @@ export default function CreateCanvas({
               {/* Canvas coordinate indicator */}
               <div
                 className="
-                  pointer-events-none absolute left-2 top-2 z-10
-                  rounded-md bg-black/20 px-1.5 py-1
-                  font-mono text-[8px] text-black/40
-                "
+  pointer-events-none
+  absolute left-2 top-2 z-10
+  rounded-md
+  bg-[var(--surface-muted)]/80
+  px-1.5 py-1
+  font-mono text-[8px]
+  text-[var(--text-muted)]
+  shadow-sm
+"
               >
                 {canvasSize.width} × {canvasSize.height}
               </div>

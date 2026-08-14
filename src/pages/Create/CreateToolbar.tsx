@@ -1,6 +1,5 @@
 // src/pages/Create/CreateToolbar.tsx
 // src/pages/Create/CreateToolbar.tsx
-
 import {
   Circle,
   Eraser,
@@ -85,13 +84,6 @@ export function CreateToolbar({
   mobile = false,
 }: Props) {
   const handleToolClick = (tool: ToolDefinition) => {
-    /*
-     * Shape tools create an object immediately,
-     * but the toolbar does NOT stay stuck on that tool.
-     *
-     * This prevents the old behaviour where selecting
-     * a tool feels like the tool is permanently active.
-     */
     if (tool.type) {
       onAddObject(tool.type);
       return;
@@ -109,14 +101,21 @@ export function CreateToolbar({
       }
     >
       {!mobile && (
-        <div className="mb-1 flex h-7 w-7 items-center justify-center rounded-lg bg-white/[0.04] text-[9px] font-semibold text-white/30">
+        <div
+          className="
+            mb-1 flex h-7 w-7 items-center justify-center
+            rounded-lg
+            bg-[var(--surface-muted)]
+            text-[9px] font-semibold
+            text-[var(--text-muted)]
+          "
+        >
           ⌘
         </div>
       )}
 
       {tools.map((tool) => {
         const Icon = tool.icon;
-
         const active = activeTool === tool.id;
 
         return (
@@ -133,18 +132,39 @@ export function CreateToolbar({
               transition-all duration-150
               ${
                 active
-                  ? "bg-[#6366F1] text-white shadow-lg shadow-indigo-500/20"
-                  : "text-white/45 hover:bg-white/[0.06] hover:text-white"
+                  ? "bg-[var(--toolbar-active)] text-[var(--toolbar-active-text)] shadow-lg shadow-indigo-500/20"
+                  : "text-[var(--toolbar-icon)] hover:bg-[var(--toolbar-hover)] hover:text-[var(--toolbar-icon-hover)]"
               }
             `}
           >
             <Icon size={17} strokeWidth={1.8} />
 
             {!mobile && (
-              <span className="pointer-events-none absolute left-[54px] z-[200] hidden min-w-max items-center gap-3 rounded-lg border border-white/10 bg-[#1b1e26] px-3 py-2 text-[11px] text-white shadow-2xl group-hover:flex">
+              <span
+                className="
+                  pointer-events-none absolute left-[54px] z-[200]
+                  hidden min-w-max items-center gap-3
+                  rounded-lg
+                  border border-[var(--tooltip-border)]
+                  bg-[var(--tooltip-background)]
+                  px-3 py-2
+                  text-[11px]
+                  text-[var(--tooltip-text)]
+                  shadow-2xl
+                  group-hover:flex
+                "
+              >
                 <span>{tool.label}</span>
 
-                <kbd className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[9px] text-white/50">
+                <kbd
+                  className="
+                    rounded
+                    bg-[var(--surface-muted)]
+                    px-1.5 py-0.5
+                    font-mono text-[9px]
+                    text-[var(--text-muted)]
+                  "
+                >
                   {tool.shortcut}
                 </kbd>
               </span>
@@ -162,7 +182,14 @@ export function CreateToolbar({
             title="Clear selection (Escape)"
             aria-label="Clear selection"
             onClick={() => onToolChange("select")}
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-white/35 transition hover:bg-white/[0.06] hover:text-white"
+            className="
+              flex h-10 w-10 items-center justify-center
+              rounded-xl
+              text-[var(--text-muted)]
+              transition
+              hover:bg-[var(--toolbar-hover)]
+              hover:text-[var(--toolbar-icon-hover)]
+            "
           >
             <Eraser size={17} strokeWidth={1.8} />
           </button>

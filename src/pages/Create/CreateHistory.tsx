@@ -26,7 +26,16 @@ export default function CreateHistory({
           disabled={!canUndo}
           onClick={onUndo}
           title="Undo"
-          className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg text-[10px] font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-30"
+          className="
+            flex h-8 flex-1 items-center justify-center gap-1.5
+            rounded-lg
+            text-[10px] font-medium
+            text-[var(--text-secondary)]
+            transition-colors
+            hover:bg-[var(--surface-muted)]
+            disabled:cursor-not-allowed
+            disabled:opacity-30
+          "
         >
           <Undo2 size={13} />
           Undo
@@ -37,7 +46,16 @@ export default function CreateHistory({
           disabled={!canRedo}
           onClick={onRedo}
           title="Redo"
-          className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg text-[10px] font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-30"
+          className="
+            flex h-8 flex-1 items-center justify-center gap-1.5
+            rounded-lg
+            text-[10px] font-medium
+            text-[var(--text-secondary)]
+            transition-colors
+            hover:bg-[var(--surface-muted)]
+            disabled:cursor-not-allowed
+            disabled:opacity-30
+          "
         >
           <Redo2 size={13} />
           Redo
@@ -47,7 +65,14 @@ export default function CreateHistory({
           type="button"
           onClick={onReset}
           title="Reset design"
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
+          className="
+            flex h-8 w-8 items-center justify-center
+            rounded-lg
+            text-[var(--text-muted)]
+            transition-colors
+            hover:bg-[var(--surface-muted)]
+            hover:text-[var(--text)]
+          "
         >
           <RotateCcw size={13} />
         </button>

@@ -473,47 +473,85 @@ export default function CreatePage() {
   }, [selectedId, undo, redo, deleteObject, duplicateObject]);
 
   return (
-    <div className="flex min-h-[calc(100vh-64px)] flex-col overflow-hidden bg-[#0f1117] text-[var(--text)]">
+    <div
+      className="
+    flex min-h-[calc(100vh-64px)]
+    flex-col overflow-hidden
+    bg-[var(--background)]
+    text-[var(--text)]
+  "
+    >
       {/* =====================================================
           EDITOR HEADER
       ====================================================== */}
-      <header className="sticky top-0 z-[100] h-14 shrink-0 border-b border-white/[0.08] bg-[#111318]/95 backdrop-blur-xl">
-        <div className="flex h-full items-center justify-between px-3 sm:px-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#6366F1] text-[11px] font-bold text-white shadow-lg shadow-indigo-500/20">
+      <header
+        className="
+    sticky top-0 z-[100]
+    h-14 shrink-0
+    border-b border-[var(--border)]
+    bg-[var(--editor-header)]/95
+    backdrop-blur-xl
+  "
+      >
+        <div
+          className="
+      flex h-full min-w-0 items-center justify-between
+      gap-2 px-2
+      sm:px-4
+    "
+        >
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <div
+              className="
+          flex h-8 w-8 shrink-0
+          items-center justify-center
+          rounded-lg
+          bg-[var(--brand)]
+          text-[11px] font-bold text-white
+          shadow-lg
+        "
+            >
               IT
             </div>
 
             <div className="min-w-0">
-              <div className="truncate text-xs font-semibold text-white">
+              <div className="truncate text-xs font-semibold text-[var(--text)]">
                 Create
               </div>
 
-              <div className="hidden truncate text-[10px] text-white/40 sm:block">
+              <div className="hidden truncate text-[10px] text-[var(--text-muted)] sm:block">
                 Icon & logo design studio
               </div>
             </div>
 
-            <div className="hidden h-5 w-px bg-white/10 md:block" />
+            <div className="hidden h-5 w-px bg-[var(--border)] md:block" />
 
-            <div className="hidden items-center gap-2 text-[10px] text-white/40 md:flex">
+            <div className="hidden items-center gap-2 text-[10px] text-[var(--text-muted)] md:flex">
               <span>{objects.length} layers</span>
-
               <span>•</span>
-
               <span>
                 {canvasSize.width} × {canvasSize.height}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <button
               type="button"
               title="Undo"
               onClick={undo}
               disabled={!history.length}
-              className="hidden h-8 w-8 items-center justify-center rounded-lg text-white/50 transition hover:bg-white/5 hover:text-white disabled:pointer-events-none disabled:opacity-30 sm:flex"
+              className="
+          hidden h-8 w-8 items-center justify-center
+          rounded-lg
+          text-[var(--text-muted)]
+          transition
+          hover:bg-[var(--surface-muted)]
+          hover:text-[var(--text)]
+          disabled:pointer-events-none
+          disabled:opacity-30
+          sm:flex
+        "
             >
               ↶
             </button>
@@ -523,7 +561,17 @@ export default function CreatePage() {
               title="Redo"
               onClick={redo}
               disabled={!future.length}
-              className="hidden h-8 w-8 items-center justify-center rounded-lg text-white/50 transition hover:bg-white/5 hover:text-white disabled:pointer-events-none disabled:opacity-30 sm:flex"
+              className="
+          hidden h-8 w-8 items-center justify-center
+          rounded-lg
+          text-[var(--text-muted)]
+          transition
+          hover:bg-[var(--surface-muted)]
+          hover:text-[var(--text)]
+          disabled:pointer-events-none
+          disabled:opacity-30
+          sm:flex
+        "
             >
               ↷
             </button>
@@ -542,7 +590,15 @@ export default function CreatePage() {
       ====================================================== */}
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
         {/* LEFT TOOLBAR */}
-        <aside className="sticky left-0 top-14 z-50 hidden h-[calc(100vh-120px)] w-[68px] shrink-0 border-r border-white/[0.07] bg-[#15171d] lg:block">
+        <aside
+          className="
+    sticky left-0 top-14 z-50
+    hidden h-full w-[68px] shrink-0
+    border-r border-[var(--border)]
+    bg-[var(--editor-panel)]
+    lg:block
+  "
+        >
           <CreateToolbar
             activeTool={activeTool}
             onToolChange={setActiveTool}
@@ -551,10 +607,15 @@ export default function CreatePage() {
         </aside>
 
         {/* CENTER WORKSPACE */}
-        <main className="relative min-w-0 flex-1 overflow-hidden bg-[#0c0e13]">
+        <main
+          className="
+    relative min-w-0 min-h-0
+    flex-1 overflow-hidden
+    bg-[var(--editor-workspace)]
+  "
+        >
           <CreateCanvas
             canvasSize={canvasSize}
-            
             objects={objects}
             selectedId={selectedId}
             setSelectedId={setSelectedId}
@@ -569,7 +630,16 @@ export default function CreatePage() {
         </main>
 
         {/* RIGHT INSPECTOR */}
-        <aside className="sticky right-0 top-14 z-50 hidden h-[calc(100vh-120px)] w-[320px] shrink-0 overflow-hidden border-l border-white/[0.07] bg-[#15171d] xl:flex xl:flex-col">
+        <aside
+          className="
+    sticky right-0 top-14 z-50
+    hidden h-full w-[320px] shrink-0
+    overflow-hidden
+    border-l border-[var(--border)]
+    bg-[var(--editor-panel)]
+    xl:flex xl:flex-col
+  "
+        >
           <div className="min-h-0 flex-1 overflow-y-auto">
             <CreateProperties
               object={selectedObject}
@@ -590,7 +660,13 @@ export default function CreatePage() {
             />
           </div>
 
-          <div className="shrink-0 border-t border-white/[0.07] bg-[#111318]">
+          <div
+            className="
+    shrink-0
+    border-t border-[var(--border)]
+    bg-[var(--editor-panel-alt)]
+  "
+          >
             <CreateHistory
               canUndo={history.length > 0}
               canRedo={future.length > 0}
@@ -603,7 +679,18 @@ export default function CreatePage() {
       </div>
 
       {/* MOBILE TOOLBAR */}
-      <div className="sticky bottom-0 z-[100] flex h-14 shrink-0 items-center justify-center border-t border-white/[0.08] bg-[#15171d]/95 backdrop-blur-xl lg:hidden">
+      <div
+        className="
+    sticky bottom-0 z-[100]
+    flex h-14 shrink-0
+    items-center justify-center
+    border-t border-[var(--border)]
+    bg-[var(--editor-panel)]/95
+    px-2
+    backdrop-blur-xl
+    lg:hidden
+  "
+      >
         <CreateToolbar
           activeTool={activeTool}
           onToolChange={setActiveTool}
