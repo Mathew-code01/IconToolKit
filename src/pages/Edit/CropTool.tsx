@@ -1,8 +1,16 @@
 // src/pages/Edit/CropTool.tsx
 // src/pages/Edit/CropTool.tsx
 
-import { useId } from "react";
-import type { CropSettings } from "./EditPage";
+import React from "react";
+
+export type CropAspectRatio = "free" | "1:1" | "4:3" | "3:2" | "16:9" | "9:16";
+
+export interface CropSettings {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 
 export interface CropToolProps {
   imageUrl: string | null;
@@ -12,15 +20,31 @@ export interface CropToolProps {
   onChange: (crop: CropSettings | null) => void;
 }
 
-type AspectPreset = "free" | "1:1" | "4:3" | "16:9" | "9:16";
-
-const PRESETS: { id: AspectPreset; label: string; ratio: number | null }[] = [
-  { id: "free", label: "Free", ratio: null },
-  { id: "1:1", label: "1:1", ratio: 1 },
-  { id: "4:3", label: "4:3", ratio: 4 / 3 },
-  { id: "16:9", label: "16:9", ratio: 16 / 9 },
-  { id: "9:16", label: "9:16", ratio: 9 / 16 },
+const aspectRatios: {
+  value: CropAspectRatio;
+  label: string;
+}[] = [
+  { value: "free", label: "Free" },
+  { value: "1:1", label: "1 : 1" },
+  { value: "4:3", label: "4 : 3" },
+  { value: "3:2", label: "3 : 2" },
+  { value: "16:9", label: "16 : 9" },
+  { value: "9:16", label: "9 : 16" },
 ];
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function getRatioValue(ratio: CropAspectRatio) {
+  if (ratio === "free") {
+    return null;
+  }
+
+  const [width, height] = ratio.split(":").map(Number);
+
+  return width / height;
+}
 
 export default function CropTool({
   imageUrl,
@@ -29,67 +53,112 @@ export default function CropTool({
   crop,
   onChange,
 }: CropToolProps) {
-  const disabled = !imageUrl || !imageWidth || !imageHeight;
-
-  const current: CropSettings = crop ?? {
+  const currentCrop = crop ?? {
     x: 0,
     y: 0,
     width: imageWidth,
     height: imageHeight,
   };
 
-  const applyPreset = (ratio: number | null) => {
-    if (disabled) return;
+  const updateCrop = (updates: Partial<CropSettings>) => {
+    const next = {
+      ...currentCrop,
+      ...updates,
+    };
 
-    if (ratio === null) {
-      onChange({ x: 0, y: 0, width: imageWidth, height: imageHeight });
-      return;
-    }
-
-    let width = imageWidth;
-    let height = width / ratio;
-
-    if (height > imageHeight) {
-      height = imageHeight;
-      width = height * ratio;
-    }
+    const maxWidth = Math.max(1, imageWidth - next.x);
+    const maxHeight = Math.max(1, imageHeight - next.y);
 
     onChange({
-      x: (imageWidth - width) / 2,
-      y: (imageHeight - height) / 2,
-      width,
-      height,
+      x: clamp(next.x, 0, Math.max(0, imageWidth - 1)),
+      y: clamp(next.y, 0, Math.max(0, imageHeight - 1)),
+      width: clamp(next.width, 1, maxWidth),
+      height: clamp(next.height, 1, maxHeight),
     });
   };
 
-  const update = (key: keyof CropSettings, value: number) => {
-    onChange({ ...current, [key]: Math.max(0, value) });
+  const handleAspectRatioChange = (ratio: CropAspectRatio) => {
+    if (ratio === "free") {
+      return;
+    }
+
+    const aspect = getRatioValue(ratio);
+
+    if (!aspect) {
+      return;
+    }
+
+    let width = currentCrop.width;
+    let height = Math.round(width / aspect);
+
+    if (height > imageHeight - currentCrop.y) {
+      height = imageHeight - currentCrop.y;
+      width = Math.round(height * aspect);
+    }
+
+    if (width > imageWidth - currentCrop.x) {
+      width = imageWidth - currentCrop.x;
+      height = Math.round(width / aspect);
+    }
+
+    onChange({
+      ...currentCrop,
+      width: Math.max(1, width),
+      height: Math.max(1, height),
+    });
+  };
+
+  const resetCrop = () => {
+    onChange({
+      x: 0,
+      y: 0,
+      width: imageWidth,
+      height: imageHeight,
+    });
   };
 
   return (
     <section className="w-full p-4">
       <div className="mb-4">
         <h3 className="text-sm font-semibold text-[var(--text)]">Crop</h3>
+
         <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
           Trim your image and control the exact crop area.
         </p>
       </div>
+
+      {imageUrl && (
+        <div className="mb-4 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]">
+          <img
+            src={imageUrl}
+            alt=""
+            className="block max-h-40 w-full object-contain"
+          />
+        </div>
+      )}
 
       <div className="mb-4">
         <span className="mb-2 block text-xs font-medium text-[var(--text-secondary)]">
           Aspect ratio
         </span>
 
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-          {PRESETS.map((preset) => (
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+          {aspectRatios.map((ratio) => (
             <button
-              key={preset.id}
+              key={ratio.value}
               type="button"
-              disabled={disabled}
-              onClick={() => applyPreset(preset.ratio)}
-              className="min-h-9 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-2 text-xs font-medium text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={() => handleAspectRatioChange(ratio.value)}
+              className="
+                min-h-9 rounded-[var(--radius-md)]
+                border border-[var(--border)]
+                bg-[var(--surface)]
+                px-2 text-xs font-medium
+                text-[var(--text-secondary)]
+                transition
+                hover:bg-[var(--surface-muted)]
+              "
             >
-              {preset.label}
+              {ratio.label}
             </button>
           ))}
         </div>
@@ -98,78 +167,103 @@ export default function CropTool({
       <div className="grid gap-3 sm:grid-cols-2">
         <NumberField
           label="X position"
-          value={Math.round(current.x)}
+          value={currentCrop.x}
           min={0}
-          disabled={disabled}
-          onChange={(value) => update("x", value)}
+          max={Math.max(0, imageWidth - 1)}
+          onChange={(value) => updateCrop({ x: value })}
         />
 
         <NumberField
           label="Y position"
-          value={Math.round(current.y)}
+          value={currentCrop.y}
           min={0}
-          disabled={disabled}
-          onChange={(value) => update("y", value)}
+          max={Math.max(0, imageHeight - 1)}
+          onChange={(value) => updateCrop({ y: value })}
         />
 
         <NumberField
           label="Width"
-          value={Math.round(current.width)}
+          value={currentCrop.width}
           min={1}
-          disabled={disabled}
-          onChange={(value) => update("width", value)}
+          max={Math.max(1, imageWidth - currentCrop.x)}
+          onChange={(value) => updateCrop({ width: value })}
         />
 
         <NumberField
           label="Height"
-          value={Math.round(current.height)}
+          value={currentCrop.height}
           min={1}
-          disabled={disabled}
-          onChange={(value) => update("height", value)}
+          max={Math.max(1, imageHeight - currentCrop.y)}
+          onChange={(value) => updateCrop({ height: value })}
         />
       </div>
 
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => onChange(null)}
-        className="mt-4 w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-xs font-medium text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        Reset crop
-      </button>
+      <div className="mt-4 flex justify-end">
+        <button
+          type="button"
+          onClick={resetCrop}
+          className="
+            min-h-10 rounded-[var(--radius-md)]
+            border border-[var(--border)]
+            px-4 text-sm font-medium
+            text-[var(--text-secondary)]
+            hover:bg-[var(--surface-muted)]
+          "
+        >
+          Reset crop
+        </button>
+      </div>
     </section>
   );
+}
+
+interface NumberFieldProps {
+  label: string;
+  value: number;
+  min?: number;
+  max?: number;
+  onChange: (value: number) => void;
 }
 
 function NumberField({
   label,
   value,
   min = 0,
-  disabled,
+  max,
   onChange,
-}: {
-  label: string;
-  value: number;
-  min?: number;
-  disabled?: boolean;
-  onChange: (value: number) => void;
-}) {
-  const id = useId();
-
+}: NumberFieldProps) {
   return (
-    <label htmlFor={id} className="block">
+    <label className="block">
       <span className="mb-2 block text-xs font-medium text-[var(--text-secondary)]">
         {label}
       </span>
 
       <input
-        id={id}
         type="number"
         min={min}
+        max={max}
         value={value}
-        disabled={disabled}
-        onChange={(event) => onChange(Math.max(min, Number(event.target.value)))}
-        className="h-10 w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)] outline-none focus:border-[var(--brand)] disabled:cursor-not-allowed disabled:opacity-40"
+        onChange={(event) => {
+          const parsed = Number(event.target.value);
+
+          if (!Number.isFinite(parsed)) {
+            return;
+          }
+
+          onChange(
+            Math.min(max ?? Number.POSITIVE_INFINITY, Math.max(min, parsed)),
+          );
+        }}
+        className="
+          h-10 w-full
+          rounded-[var(--radius-md)]
+          border border-[var(--border)]
+          bg-[var(--surface)]
+          px-3 text-sm
+          text-[var(--text)]
+          outline-none
+          focus:border-[var(--brand)]
+        "
       />
     </label>
   );
