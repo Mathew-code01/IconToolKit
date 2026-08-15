@@ -31,7 +31,7 @@ import {
 
 import BackgroundRemover from "./BackgroundRemover";
 import BackgroundEditor from "./BackgroundEditor";
-import CropTool from "./CropTool";
+import CropTool, { CropOverlay } from "./CropTool";
 import ResizeTool from "./ResizeTool";
 import RotateFlipTool from "./RotateFlipTool";
 import RoundedCornersTool from "./RoundedCornersTool";
@@ -233,6 +233,8 @@ export default function EditPage() {
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
 
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
+
+  const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
 
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof window === "undefined") {
@@ -536,17 +538,16 @@ export default function EditPage() {
      CROP
   ======================================================= */
 
-  const updateCrop = useCallback(
-    (crop: CropSettings | null) => {
-      saveHistory();
+  const updateCrop = useCallback((crop: CropSettings | null) => {
+    setEditor((current) => ({
+      ...current,
+      crop,
+    }));
+  }, []);
 
-      setEditor((current) => ({
-        ...current,
-        crop,
-      }));
-    },
-    [saveHistory],
-  );
+  const beginCropInteraction = useCallback(() => {
+    saveHistory();
+  }, [saveHistory]);
 
   /* =======================================================
      RESET
@@ -590,27 +591,102 @@ export default function EditPage() {
     setActiveTool("image");
   }, []);
 
+
+  function loadImageForCanvas(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Unable to load image"));
+
+    image.src = src;
+  });
+}
+
   /* =======================================================
      DOWNLOAD
   ======================================================= */
 
-  const handleDownload = useCallback(() => {
-    if (!imageUrl) {
+  const handleDownload = useCallback(async () => {
+    if (!imageUrl || !imageWidth || !imageHeight) {
       return;
     }
 
-    const link = document.createElement("a");
+    try {
+      const source = await loadImageForCanvas(imageUrl);
 
-    link.href = imageUrl;
+      const crop = editor.crop ?? {
+        x: 0,
+        y: 0,
+        width: imageWidth,
+        height: imageHeight,
+      };
 
-    link.download = imageName || "icon-toolkit-image";
+      const x = clamp(Math.round(crop.x), 0, imageWidth - 1);
+      const y = clamp(Math.round(crop.y), 0, imageHeight - 1);
 
-    document.body.appendChild(link);
+      const width = clamp(Math.round(crop.width), 1, imageWidth - x);
 
-    link.click();
+      const height = clamp(Math.round(crop.height), 1, imageHeight - y);
 
-    link.remove();
-  }, [imageUrl, imageName]);
+      const canvas = document.createElement("canvas");
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const context = canvas.getContext("2d");
+
+      if (!context) {
+        return;
+      }
+
+      context.clearRect(0, 0, width, height);
+
+      context.drawImage(source, x, y, width, height, 0, 0, width, height);
+
+      const outputType =
+        imageType === "image/jpeg"
+          ? "image/jpeg"
+          : imageType === "image/webp"
+            ? "image/webp"
+            : "image/png";
+
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob(resolve, outputType, 0.95);
+      });
+
+      if (!blob) {
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+
+      link.href = url;
+
+      const extension =
+        outputType === "image/jpeg"
+          ? "jpg"
+          : outputType === "image/webp"
+            ? "webp"
+            : "png";
+
+      const baseName = imageName.replace(/\.[^/.]+$/, "");
+
+      link.download = `${baseName}-cropped.${extension}`;
+
+      document.body.appendChild(link);
+
+      link.click();
+
+      link.remove();
+
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Failed to export image:", error);
+    }
+  }, [imageUrl, imageWidth, imageHeight, editor.crop, imageType, imageName]);
 
   /* =======================================================
      ZOOM
@@ -1828,6 +1904,7 @@ export default function EditPage() {
                       onClick={() => {
                         setActiveTool(tool.id);
                         setMobileToolsOpen(false);
+                        setMobileInspectorOpen(true);
                       }}
                       className="
                         flex w-full
@@ -1912,15 +1989,15 @@ export default function EditPage() {
             >
               <div
                 className="
-                  relative
-                  shrink-0
-                  overflow-hidden
-                  rounded-[4px]
-                  border
-                  border-[var(--canvas-border)]
-                  bg-[var(--canvas-background)]
-                  shadow-[0_30px_80px_var(--editor-shadow)]
-                "
+    relative
+    shrink-0
+    overflow-hidden
+    rounded-[4px]
+    border
+    border-[var(--canvas-border)]
+    bg-[var(--canvas-background)]
+    shadow-[0_30px_80px_var(--editor-shadow)]
+  "
                 style={{
                   width: Math.max(180, imageWidth * (zoom / 100)),
                   height: Math.max(180, imageHeight * (zoom / 100)),
@@ -1941,6 +2018,18 @@ export default function EditPage() {
                   onZoomChange={setZoom}
                   previewOnly
                 />
+
+                {activeTool === "crop" && (
+                  <CropOverlay
+                    imageUrl={imageUrl}
+                    imageWidth={imageWidth}
+                    imageHeight={imageHeight}
+                    crop={editor.crop}
+                    zoom={zoom}
+                    onChange={updateCrop}
+                    onInteractionStart={beginCropInteraction}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -2327,6 +2416,7 @@ export default function EditPage() {
                       onClick={() => {
                         setActiveTool(tool.id);
                         setMobileToolsOpen(false);
+                        setMobileInspectorOpen(true);
                       }}
                       className={`
                         flex items-center
@@ -2383,6 +2473,90 @@ export default function EditPage() {
                   );
                 })}
               </div>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* ===================================================
+    MOBILE TOOL INSPECTOR
+=================================================== */}
+
+      {mobileInspectorOpen && (
+        <div
+          className="
+      fixed inset-0
+      z-[450]
+      xl:hidden
+    "
+        >
+          <button
+            type="button"
+            aria-label="Close inspector"
+            onClick={() => setMobileInspectorOpen(false)}
+            className="
+        absolute inset-0
+        bg-black/40
+        backdrop-blur-sm
+      "
+          />
+
+          <aside
+            className="
+        absolute
+        bottom-0 left-0 right-0
+        max-h-[82vh]
+        overflow-hidden
+        rounded-t-2xl
+        border-t
+        border-[var(--border)]
+        bg-[var(--surface)]
+        shadow-[0_-20px_60px_rgba(0,0,0,0.25)]
+      "
+          >
+            <div
+              className="
+          flex h-12
+          shrink-0
+          items-center
+          justify-between
+          border-b
+          border-[var(--border)]
+          px-4
+        "
+            >
+              <div>
+                <div className="text-xs font-semibold">
+                  {activeToolDefinition.label}
+                </div>
+
+                <div className="mt-0.5 text-[8px] text-[var(--text-muted)]">
+                  {activeToolDefinition.description}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setMobileInspectorOpen(false)}
+                className="
+            flex h-8 w-8
+            items-center justify-center
+            rounded-lg
+            text-[var(--text-muted)]
+            hover:bg-[var(--surface-muted)]
+          "
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            <div
+              className="
+          max-h-[calc(82vh-48px)]
+          overflow-y-auto
+        "
+            >
+              {renderToolContent()}
             </div>
           </aside>
         </div>
