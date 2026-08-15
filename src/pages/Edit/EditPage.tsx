@@ -77,10 +77,13 @@ export type CropSettings = {
   height: number;
 };
 
+export type ResizeMode = "fit" | "fill" | "stretch";
+
 export type ResizeSettings = {
   width: number;
   height: number;
   lockAspectRatio: boolean;
+  mode: ResizeMode;
 };
 
 export type RotateFlipSettings = {
@@ -158,6 +161,7 @@ function createDefaultEditorState(
       width,
       height,
       lockAspectRatio: true,
+      mode: "fit",
     },
     rotateFlip: { ...DEFAULT_ROTATE_FLIP },
     roundedCorners: {
@@ -438,7 +442,6 @@ export default function EditPage() {
     event.preventDefault();
   };
 
- 
   /* =======================================================
      BACKGROUND
   ======================================================= */
@@ -591,20 +594,19 @@ export default function EditPage() {
     setActiveTool("image");
   }, []);
 
-
   function loadImageForCanvas(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
+    return new Promise((resolve, reject) => {
+      const image = new Image();
 
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("Unable to load image"));
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("Unable to load image"));
 
-    image.src = src;
-  });
-}
+      image.src = src;
+    });
+  }
 
   /* =======================================================
-     DOWNLOAD
+     DOWNLOAD / FINAL COMPOSITE EXPORT
   ======================================================= */
 
   const handleDownload = useCallback(async () => {
@@ -622,17 +624,32 @@ export default function EditPage() {
         height: imageHeight,
       };
 
-      const x = clamp(Math.round(crop.x), 0, imageWidth - 1);
-      const y = clamp(Math.round(crop.y), 0, imageHeight - 1);
+      const cropX = clamp(Math.round(crop.x), 0, Math.max(0, imageWidth - 1));
 
-      const width = clamp(Math.round(crop.width), 1, imageWidth - x);
+      const cropY = clamp(Math.round(crop.y), 0, Math.max(0, imageHeight - 1));
 
-      const height = clamp(Math.round(crop.height), 1, imageHeight - y);
+      const cropWidth = clamp(Math.round(crop.width), 1, imageWidth - cropX);
+
+      const cropHeight = clamp(Math.round(crop.height), 1, imageHeight - cropY);
+
+      /*
+       * The resize dimensions represent the FINAL OUTPUT CANVAS.
+       *
+       * Example:
+       * source: 800 × 800
+       * target: 1200 × 600
+       *
+       * We create a 1200 × 600 canvas and fit the cropped image
+       * inside it without stretching.
+       */
+      const outputWidth = Math.max(1, Math.round(editor.resize.width));
+
+      const outputHeight = Math.max(1, Math.round(editor.resize.height));
 
       const canvas = document.createElement("canvas");
 
-      canvas.width = width;
-      canvas.height = height;
+      canvas.width = outputWidth;
+      canvas.height = outputHeight;
 
       const context = canvas.getContext("2d");
 
@@ -640,9 +657,204 @@ export default function EditPage() {
         return;
       }
 
-      context.clearRect(0, 0, width, height);
+      context.clearRect(0, 0, outputWidth, outputHeight);
 
-      context.drawImage(source, x, y, width, height, 0, 0, width, height);
+      /*
+       * -------------------------------------------------------
+       * BACKGROUND
+       * -------------------------------------------------------
+       */
+
+      if (editor.background.type === "solid") {
+        context.fillStyle = editor.background.color;
+        context.fillRect(0, 0, outputWidth, outputHeight);
+      }
+
+      if (editor.background.type === "gradient") {
+        const angle = (editor.background.gradientAngle * Math.PI) / 180;
+
+        const centerX = outputWidth / 2;
+        const centerY = outputHeight / 2;
+
+        const length =
+          Math.sqrt(outputWidth * outputWidth + outputHeight * outputHeight) /
+          2;
+
+        const x1 = centerX - Math.cos(angle) * length;
+        const y1 = centerY - Math.sin(angle) * length;
+        const x2 = centerX + Math.cos(angle) * length;
+        const y2 = centerY + Math.sin(angle) * length;
+
+        const gradient = context.createLinearGradient(x1, y1, x2, y2);
+
+        gradient.addColorStop(0, editor.background.color);
+
+        gradient.addColorStop(1, editor.background.gradientTo);
+
+        context.fillStyle = gradient;
+
+        context.fillRect(0, 0, outputWidth, outputHeight);
+      }
+
+      /*
+       * Transparent background needs no fill.
+       */
+
+      /*
+       * -------------------------------------------------------
+       * CROP SOURCE
+       * -------------------------------------------------------
+       */
+
+      const croppedCanvas = document.createElement("canvas");
+
+      croppedCanvas.width = cropWidth;
+      croppedCanvas.height = cropHeight;
+
+      const croppedContext = croppedCanvas.getContext("2d");
+
+      if (!croppedContext) {
+        return;
+      }
+
+      croppedContext.clearRect(0, 0, cropWidth, cropHeight);
+
+      croppedContext.drawImage(
+        source,
+        cropX,
+        cropY,
+        cropWidth,
+        cropHeight,
+        0,
+        0,
+        cropWidth,
+        cropHeight,
+      );
+
+      /*
+       * -------------------------------------------------------
+       * AVAILABLE AREA AFTER PADDING
+       * -------------------------------------------------------
+       */
+
+      const availableWidth = Math.max(
+        1,
+        outputWidth - editor.padding.left - editor.padding.right,
+      );
+
+      const availableHeight = Math.max(
+        1,
+        outputHeight - editor.padding.top - editor.padding.bottom,
+      );
+
+      /*
+       * FIT IMAGE INTO OUTPUT FRAME.
+       *
+       * This is the important anti-distortion behavior.
+       *
+       * The source keeps its aspect ratio.
+       */
+      const scale = Math.min(
+        availableWidth / cropWidth,
+        availableHeight / cropHeight,
+      );
+
+      const drawWidth = Math.max(1, Math.round(cropWidth * scale));
+
+      const drawHeight = Math.max(1, Math.round(cropHeight * scale));
+
+      const centerX = editor.padding.left + (availableWidth - drawWidth) / 2;
+
+      const centerY = editor.padding.top + (availableHeight - drawHeight) / 2;
+
+      /*
+       * -------------------------------------------------------
+       * IMAGE TRANSFORM
+       * -------------------------------------------------------
+       */
+
+      context.save();
+
+      context.translate(centerX + drawWidth / 2, centerY + drawHeight / 2);
+
+      context.rotate((editor.rotateFlip.rotation * Math.PI) / 180);
+
+      context.scale(
+        editor.rotateFlip.flipHorizontal ? -1 : 1,
+        editor.rotateFlip.flipVertical ? -1 : 1,
+      );
+
+      /*
+       * Rounded corners are applied to the image itself.
+       *
+       * We use the smaller output dimension as the reference
+       * so the result behaves consistently at different sizes.
+       */
+      if (editor.roundedCorners.radius > 0) {
+        const radiusPercent = clamp(editor.roundedCorners.radius, 0, 100);
+
+        const radius = Math.min(drawWidth, drawHeight) * (radiusPercent / 100);
+
+        context.beginPath();
+
+        context.moveTo(-drawWidth / 2 + radius, -drawHeight / 2);
+
+        context.lineTo(drawWidth / 2 - radius, -drawHeight / 2);
+
+        context.quadraticCurveTo(
+          drawWidth / 2,
+          -drawHeight / 2,
+          drawWidth / 2,
+          -drawHeight / 2 + radius,
+        );
+
+        context.lineTo(drawWidth / 2, drawHeight / 2 - radius);
+
+        context.quadraticCurveTo(
+          drawWidth / 2,
+          drawHeight / 2,
+          drawWidth / 2 - radius,
+          drawHeight / 2,
+        );
+
+        context.lineTo(-drawWidth / 2 + radius, drawHeight / 2);
+
+        context.quadraticCurveTo(
+          -drawWidth / 2,
+          drawHeight / 2,
+          -drawWidth / 2,
+          drawHeight / 2 - radius,
+        );
+
+        context.lineTo(-drawWidth / 2, -drawHeight / 2 + radius);
+
+        context.quadraticCurveTo(
+          -drawWidth / 2,
+          -drawHeight / 2,
+          -drawWidth / 2 + radius,
+          -drawHeight / 2,
+        );
+
+        context.closePath();
+
+        context.clip();
+      }
+
+      context.drawImage(
+        croppedCanvas,
+        -drawWidth / 2,
+        -drawHeight / 2,
+        drawWidth,
+        drawHeight,
+      );
+
+      context.restore();
+
+      /*
+       * -------------------------------------------------------
+       * EXPORT
+       * -------------------------------------------------------
+       */
 
       const outputType =
         imageType === "image/jpeg"
@@ -650,6 +862,62 @@ export default function EditPage() {
           : imageType === "image/webp"
             ? "image/webp"
             : "image/png";
+
+      /*
+       * JPEG cannot contain transparency.
+       *
+       * If the user selected a transparent background while
+       * exporting JPEG, we use white as the fallback.
+       */
+      if (
+        outputType === "image/jpeg" &&
+        editor.background.type === "transparent"
+      ) {
+        const flattenedCanvas = document.createElement("canvas");
+
+        flattenedCanvas.width = outputWidth;
+        flattenedCanvas.height = outputHeight;
+
+        const flattenedContext = flattenedCanvas.getContext("2d");
+
+        if (!flattenedContext) {
+          return;
+        }
+
+        flattenedContext.fillStyle = "#ffffff";
+
+        flattenedContext.fillRect(0, 0, outputWidth, outputHeight);
+
+        flattenedContext.drawImage(canvas, 0, 0);
+
+        const jpegBlob = await new Promise<Blob | null>((resolve) => {
+          flattenedCanvas.toBlob(resolve, outputType, 0.95);
+        });
+
+        if (!jpegBlob) {
+          return;
+        }
+
+        const url = URL.createObjectURL(jpegBlob);
+
+        const link = document.createElement("a");
+
+        link.href = url;
+
+        const baseName = imageName.replace(/\.[^/.]+$/, "");
+
+        link.download = `${baseName}-${outputWidth}x${outputHeight}.jpg`;
+
+        document.body.appendChild(link);
+
+        link.click();
+
+        link.remove();
+
+        URL.revokeObjectURL(url);
+
+        return;
+      }
 
       const blob = await new Promise<Blob | null>((resolve) => {
         canvas.toBlob(resolve, outputType, 0.95);
@@ -674,7 +942,7 @@ export default function EditPage() {
 
       const baseName = imageName.replace(/\.[^/.]+$/, "");
 
-      link.download = `${baseName}-cropped.${extension}`;
+      link.download = `${baseName}-${outputWidth}x${outputHeight}.${extension}`;
 
       document.body.appendChild(link);
 
@@ -684,10 +952,9 @@ export default function EditPage() {
 
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("Failed to export image:", error);
+      console.error("Failed to export edited image:", error);
     }
-  }, [imageUrl, imageWidth, imageHeight, editor.crop, imageType, imageName]);
-
+  }, [imageUrl, imageWidth, imageHeight, imageType, imageName, editor]);
   /* =======================================================
      ZOOM
   ======================================================= */
@@ -1035,28 +1302,84 @@ export default function EditPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div
+            className="
+    flex items-center
+    gap-1
+  "
+          >
             <button
               type="button"
-              onClick={toggleTheme}
-              title={
-                theme === "dark"
-                  ? "Switch to light theme"
-                  : "Switch to dark theme"
-              }
+              onClick={() => setMobileInspectorOpen(true)}
               className="
-                flex h-8 w-8
-                items-center justify-center
-                rounded-lg
-                border border-[var(--border)]
-                bg-[var(--surface)]
-                text-[var(--text-muted)]
-                transition
-                hover:bg-[var(--surface-muted)]
-                hover:text-[var(--text)]
-              "
+      flex h-9
+      items-center gap-1.5
+      rounded-lg
+      border
+      border-[var(--border)]
+      bg-[var(--surface)]
+      px-3
+      text-[10px]
+      font-medium
+      text-[var(--text-secondary)]
+      hover:bg-[var(--surface-muted)]
+    "
             >
-              {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+              <SlidersHorizontal size={13} />
+              Edit
+            </button>
+
+            <button
+              type="button"
+              onClick={undo}
+              disabled={!history.length}
+              className="
+      flex h-9 w-9
+      items-center
+      justify-center
+      rounded-lg
+      text-[var(--text-muted)]
+      hover:bg-[var(--surface-muted)]
+      disabled:opacity-30
+    "
+            >
+              <Undo2 size={14} />
+            </button>
+
+            <button
+              type="button"
+              onClick={redo}
+              disabled={!future.length}
+              className="
+      flex h-9 w-9
+      items-center
+      justify-center
+      rounded-lg
+      text-[var(--text-muted)]
+      hover:bg-[var(--surface-muted)]
+      disabled:opacity-30
+    "
+            >
+              <Redo2 size={14} />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDownload}
+              className="
+      flex h-9
+      items-center
+      gap-1.5
+      rounded-lg
+      bg-[var(--brand)]
+      px-3
+      text-[10px]
+      font-semibold
+      text-white
+    "
+            >
+              <Download size={13} />
+              Export
             </button>
           </div>
         </header>
@@ -1999,8 +2322,8 @@ export default function EditPage() {
     shadow-[0_30px_80px_var(--editor-shadow)]
   "
                 style={{
-                  width: Math.max(180, imageWidth * (zoom / 100)),
-                  height: Math.max(180, imageHeight * (zoom / 100)),
+                  width: Math.max(180, editor.resize.width * (zoom / 100)),
+                  height: Math.max(180, editor.resize.height * (zoom / 100)),
                 }}
               >
                 <ImageEditorTool
@@ -2097,13 +2420,13 @@ export default function EditPage() {
         <aside
           className={`
             hidden shrink-0
-            border-l
-            border-[var(--border)]
-            bg-[var(--editor-panel)]
-            transition-all
-            duration-200
-            xl:block
-            ${rightPanelOpen ? "w-[320px]" : "w-0 overflow-hidden"}
+border-l
+border-[var(--border)]
+bg-[var(--editor-panel)]
+transition-all
+duration-200
+lg:block
+           ${rightPanelOpen ? "w-[280px] xl:w-[320px]" : "w-0 overflow-hidden"}
           `}
         >
           <div

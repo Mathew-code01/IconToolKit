@@ -1,6 +1,7 @@
 // src/pages/Edit/ImageEditorTool.tsx
 // src/pages/Edit/ImageEditorTool.tsx
 // src/pages/Edit/ImageEditorTool.tsx
+// src/pages/Edit/ImageEditorTool.tsx
 
 import type {
   BackgroundSettings,
@@ -41,7 +42,6 @@ function backgroundStyle(
     };
   }
 
-  // Transparent — a checkerboard so the user can see through it.
   return {
     backgroundImage:
       "linear-gradient(45deg, var(--surface-muted) 25%, transparent 25%), linear-gradient(-45deg, var(--surface-muted) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, var(--surface-muted) 75%), linear-gradient(-45deg, transparent 75%, var(--surface-muted) 75%)",
@@ -50,21 +50,112 @@ function backgroundStyle(
   };
 }
 
+function getFitSize(
+  sourceWidth: number,
+  sourceHeight: number,
+  targetWidth: number,
+  targetHeight: number,
+) {
+  if (
+    !sourceWidth ||
+    !sourceHeight ||
+    !targetWidth ||
+    !targetHeight
+  ) {
+    return {
+      width: 0,
+      height: 0,
+    };
+  }
+
+  const scale = Math.min(
+    targetWidth / sourceWidth,
+    targetHeight / sourceHeight,
+  );
+
+  return {
+    width: sourceWidth * scale,
+    height: sourceHeight * scale,
+  };
+}
+
+function getDisplayDimensions(
+  sourceWidth: number,
+  sourceHeight: number,
+  targetWidth: number,
+  targetHeight: number,
+) {
+  const fitted = getFitSize(
+    sourceWidth,
+    sourceHeight,
+    targetWidth,
+    targetHeight,
+  );
+
+  return fitted;
+}
+
 function ComposedImage({
   imageUrl,
+  imageWidth,
+  imageHeight,
+  resize,
   padding,
   rotateFlip,
   roundedCorners,
   background,
 }: Pick<
   ImageEditorToolProps,
-  "imageUrl" | "padding" | "rotateFlip" | "roundedCorners" | "background"
+  | "imageUrl"
+  | "imageWidth"
+  | "imageHeight"
+  | "resize"
+  | "padding"
+  | "rotateFlip"
+  | "roundedCorners"
+  | "background"
 >) {
   const transform = [
     `rotate(${rotateFlip.rotation}deg)`,
     `scaleX(${rotateFlip.flipHorizontal ? -1 : 1})`,
     `scaleY(${rotateFlip.flipVertical ? -1 : 1})`,
   ].join(" ");
+
+  const fitted = getDisplayDimensions(
+    imageWidth,
+    imageHeight,
+    resize.width,
+    resize.height,
+  );
+
+  const paddingHorizontal =
+    padding.left + padding.right;
+
+  const paddingVertical =
+    padding.top + padding.bottom;
+
+  const availableWidth = Math.max(
+    1,
+    resize.width - paddingHorizontal,
+  );
+
+  const availableHeight = Math.max(
+    1,
+    resize.height - paddingVertical,
+  );
+
+  const fittedInsidePadding = getFitSize(
+    imageWidth,
+    imageHeight,
+    availableWidth,
+    availableHeight,
+  );
+
+  const previewWidth =
+    fittedInsidePadding.width || fitted.width;
+
+  const previewHeight =
+    fittedInsidePadding.height || fitted.height;
 
   return (
     <div
@@ -75,25 +166,43 @@ function ComposedImage({
       }}
     >
       {imageUrl ? (
-        <div
-          className="h-full w-full"
-          style={{
-            padding: `${padding.top}px ${padding.right}px ${padding.bottom}px ${padding.left}px`,
-          }}
-        >
-          <img
-            src={imageUrl}
-            alt=""
-            draggable={false}
-            className="h-full w-full object-contain"
-            style={{ transform }}
-          />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div
+            className="relative flex items-center justify-center"
+            style={{
+              width: `${(previewWidth / resize.width) * 100}%`,
+              height: `${(previewHeight / resize.height) * 100}%`,
+              maxWidth: "100%",
+              maxHeight: "100%",
+            }}
+          >
+            <img
+              src={imageUrl}
+              alt=""
+              draggable={false}
+              className="block h-full w-full select-none object-contain"
+              style={{
+                transform,
+                paddingTop: `${(padding.top / Math.max(1, resize.height)) * 100}%`,
+                paddingRight: `${(padding.right / Math.max(1, resize.width)) * 100}%`,
+                paddingBottom: `${(padding.bottom / Math.max(1, resize.height)) * 100}%`,
+                paddingLeft: `${(padding.left / Math.max(1, resize.width)) * 100}%`,
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
         </div>
       ) : (
         <div className="flex h-full w-full items-center justify-center text-xs text-[var(--text-muted)]">
           No image
         </div>
       )}
+
+      {/* OUTPUT SIZE LABEL */}
+
+      <div className="pointer-events-none absolute bottom-2 left-2 rounded-md bg-black/60 px-2 py-1 text-[9px] font-medium text-white backdrop-blur-sm">
+        {resize.width} × {resize.height}px
+      </div>
     </div>
   );
 }
@@ -117,6 +226,9 @@ export default function ImageEditorTool({
     return (
       <ComposedImage
         imageUrl={imageUrl}
+        imageWidth={imageWidth}
+        imageHeight={imageHeight}
+        resize={resize}
         padding={padding}
         rotateFlip={rotateFlip}
         roundedCorners={roundedCorners}
@@ -133,18 +245,49 @@ export default function ImageEditorTool({
         </h3>
 
         <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-          Overview of the current image and its combined edits.
+          Preview the final composition and output dimensions.
         </p>
       </div>
 
-      <div className="aspect-square w-full overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)]">
+      {/* FINAL OUTPUT PREVIEW */}
+
+      <div
+        className="relative w-full overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-muted)]"
+        style={{
+          aspectRatio:
+            resize.width && resize.height
+              ? `${resize.width} / ${resize.height}`
+              : "1 / 1",
+        }}
+      >
         <ComposedImage
           imageUrl={imageUrl}
+          imageWidth={imageWidth}
+          imageHeight={imageHeight}
+          resize={resize}
           padding={padding}
           rotateFlip={rotateFlip}
           roundedCorners={roundedCorners}
           background={background}
         />
+      </div>
+
+      <div className="mt-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-subtle)] p-3">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs text-[var(--text-muted)]">
+            Final canvas
+          </span>
+
+          <span className="font-mono text-xs font-semibold text-[var(--brand)]">
+            {resize.width} × {resize.height}px
+          </span>
+        </div>
+
+        <p className="mt-2 text-[10px] leading-4 text-[var(--text-muted)]">
+          The image keeps its original proportions. A different output
+          ratio creates extra canvas space rather than stretching the
+          image.
+        </p>
       </div>
 
       <div className="mt-4 space-y-2 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
@@ -154,18 +297,20 @@ export default function ImageEditorTool({
         />
 
         <InfoRow
-          label="Dimensions"
+          label="Original"
           value={`${imageWidth} × ${imageHeight}px`}
         />
 
         <InfoRow
-          label="Format"
-          value={imageType.replace("image/", "").toUpperCase()}
+          label="Output"
+          value={`${resize.width} × ${resize.height}px`}
         />
 
         <InfoRow
-          label="Target size"
-          value={`${resize.width} × ${resize.height}px`}
+          label="Format"
+          value={
+            imageType.replace("image/", "").toUpperCase() || "—"
+          }
         />
       </div>
 
@@ -208,7 +353,7 @@ function InfoRow({
 }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="text-xs text-[var(--text-muted)]">
+      <span className="shrink-0 text-xs text-[var(--text-muted)]">
         {label}
       </span>
 
