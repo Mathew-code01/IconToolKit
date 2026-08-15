@@ -1,10 +1,18 @@
 // src/pages/Edit/ResizeTool.tsx
 // src/pages/Edit/ResizeTool.tsx
-
 // src/pages/Edit/ResizeTool.tsx
 
 import { useId } from "react";
-import type { ResizeSettings } from "./EditPage";
+import {
+  ArrowLeftRight,
+  Check,
+  Lock,
+  Maximize2,
+  Minimize2,
+  Unlock,
+} from "lucide-react";
+
+import type { ResizeMode, ResizeSettings } from "./EditPage";
 
 export interface ResizeToolProps {
   imageWidth: number;
@@ -13,34 +21,81 @@ export interface ResizeToolProps {
   onChange: (updates: Partial<ResizeSettings>) => void;
 }
 
+type ResizePreset = {
+  label: string;
+  width: number;
+  height: number;
+};
+
+const PRESETS: ResizePreset[] = [
+  {
+    label: "Original",
+    width: 0,
+    height: 0,
+  },
+  {
+    label: "Square",
+    width: 1080,
+    height: 1080,
+  },
+  {
+    label: "HD",
+    width: 1280,
+    height: 720,
+  },
+  {
+    label: "Full HD",
+    width: 1920,
+    height: 1080,
+  },
+  {
+    label: "Portrait",
+    width: 1080,
+    height: 1350,
+  },
+  {
+    label: "Story",
+    width: 1080,
+    height: 1920,
+  },
+];
+
+const RESIZE_MODES: {
+  id: ResizeMode;
+  label: string;
+  description: string;
+}[] = [
+  {
+    id: "fit",
+    label: "Fit",
+    description: "Show the entire image without distortion.",
+  },
+  {
+    id: "fill",
+    label: "Fill",
+    description: "Fill the canvas and crop overflowing edges.",
+  },
+  {
+    id: "stretch",
+    label: "Stretch",
+    description: "Fill the canvas, allowing distortion.",
+  },
+];
+
+function safeDimension(value: number, fallback = 1) {
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+
+  return Math.max(1, Math.round(value));
+}
+
 function getAspectRatio(width: number, height: number) {
   if (!width || !height) {
     return 1;
   }
 
   return width / height;
-}
-
-function getAspectRatioDifference(
-  sourceWidth: number,
-  sourceHeight: number,
-  targetWidth: number,
-  targetHeight: number,
-) {
-  const sourceRatio = getAspectRatio(sourceWidth, sourceHeight);
-  const targetRatio = getAspectRatio(targetWidth, targetHeight);
-
-  return Math.abs(sourceRatio - targetRatio);
-}
-
-function formatRatio(width: number, height: number) {
-  if (!width || !height) {
-    return "—";
-  }
-
-  const divisor = greatestCommonDivisor(width, height);
-
-  return `${Math.round(width / divisor)}:${Math.round(height / divisor)}`;
 }
 
 function greatestCommonDivisor(a: number, b: number): number {
@@ -56,6 +111,34 @@ function greatestCommonDivisor(a: number, b: number): number {
   return a || 1;
 }
 
+function formatRatio(width: number, height: number) {
+  if (!width || !height) {
+    return "—";
+  }
+
+  const divisor = greatestCommonDivisor(width, height);
+
+  return `${Math.round(width / divisor)}:${Math.round(height / divisor)}`;
+}
+
+function getMegapixels(width: number, height: number) {
+  return (width * height) / 1_000_000;
+}
+
+function getRatioDifference(
+  sourceWidth: number,
+  sourceHeight: number,
+  targetWidth: number,
+  targetHeight: number,
+) {
+  const sourceRatio = getAspectRatio(sourceWidth, sourceHeight);
+  const targetRatio = getAspectRatio(targetWidth, targetHeight);
+
+  return Math.abs(sourceRatio - targetRatio);
+}
+
+
+
 export default function ResizeTool({
   imageWidth,
   imageHeight,
@@ -64,64 +147,120 @@ export default function ResizeTool({
 }: ResizeToolProps) {
   const originalRatio = getAspectRatio(imageWidth, imageHeight);
 
-  
-  const megapixels = (resize.width * resize.height) / 1_000_000;
+  const width = safeDimension(resize.width, imageWidth || 1);
+  const height = safeDimension(resize.height, imageHeight || 1);
 
-  const ratioDifference = getAspectRatioDifference(
+  const megapixels = getMegapixels(width, height);
+
+  const ratioDifference = getRatioDifference(
     imageWidth,
     imageHeight,
-    resize.width,
-    resize.height,
+    width,
+    height,
   );
 
   const aspectRatioChanged = ratioDifference > 0.01;
 
   const setWidth = (value: number) => {
-    const width = Math.max(1, Math.round(value));
+    const nextWidth = safeDimension(value);
 
     if (resize.lockAspectRatio) {
       onChange({
-        width,
-        height: Math.max(1, Math.round(width / originalRatio)),
+        width: nextWidth,
+        height: Math.max(
+          1,
+          Math.round(nextWidth / originalRatio),
+        ),
       });
-    } else {
-      onChange({ width });
+
+      return;
     }
+
+    onChange({
+      width: nextWidth,
+    });
   };
 
   const setHeight = (value: number) => {
-    const height = Math.max(1, Math.round(value));
+    const nextHeight = safeDimension(value);
 
     if (resize.lockAspectRatio) {
       onChange({
-        height,
-        width: Math.max(1, Math.round(height * originalRatio)),
+        height: nextHeight,
+        width: Math.max(
+          1,
+          Math.round(nextHeight * originalRatio),
+        ),
       });
-    } else {
-      onChange({ height });
+
+      return;
     }
+
+    onChange({
+      height: nextHeight,
+    });
+  };
+
+  const swapDimensions = () => {
+    onChange({
+      width: height,
+      height: width,
+      lockAspectRatio: false,
+    });
   };
 
   const useOriginalAspectRatio = () => {
-    const width = resize.width;
+    const nextWidth = width;
 
     onChange({
-      width,
-      height: Math.max(1, Math.round(width / originalRatio)),
+      width: nextWidth,
+      height: Math.max(
+        1,
+        Math.round(nextWidth / originalRatio),
+      ),
       lockAspectRatio: true,
     });
   };
 
+  const applyPreset = (preset: ResizePreset) => {
+    if (preset.label === "Original") {
+      onChange({
+        width: imageWidth,
+        height: imageHeight,
+        lockAspectRatio: true,
+      });
+
+      return;
+    }
+
+    onChange({
+      width: preset.width,
+      height: preset.height,
+      lockAspectRatio: false,
+    });
+  };
+
+  const scalePercentage =
+    imageWidth && imageHeight
+      ? Math.round(
+          ((width * height) /
+            (imageWidth * imageHeight)) *
+            100,
+        )
+      : 100;
+
   return (
     <section className="w-full p-4">
-      <div className="mb-4">
+      {/* HEADER */}
+
+      <div className="mb-5">
         <h3 className="text-sm font-semibold text-[var(--text)]">
           Resize
         </h3>
 
         <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-          Set the final output canvas size. The image is fitted inside the
-          canvas instead of being stretched automatically.
+          Set the final output canvas and choose how the image should
+          fit inside it.
         </p>
       </div>
 
@@ -134,7 +273,7 @@ export default function ResizeTool({
           </span>
 
           <span className="font-mono text-xs font-medium text-[var(--text)]">
-            {imageWidth} × {imageHeight}px
+            {imageWidth || 0} × {imageHeight || 0}px
           </span>
         </div>
 
@@ -144,38 +283,106 @@ export default function ResizeTool({
           </span>
 
           <span className="font-mono text-xs font-semibold text-[var(--brand)]">
-            {resize.width} × {resize.height}px
+            {width} × {height}px
           </span>
         </div>
 
         <div className="mt-2 flex items-center justify-between gap-3">
           <span className="text-xs text-[var(--text-muted)]">
-            Output ratio
+            Scale
           </span>
 
           <span className="font-mono text-xs text-[var(--text-secondary)]">
-            {formatRatio(resize.width, resize.height)}
+            {scalePercentage}%
           </span>
+        </div>
+      </div>
+
+      {/* PRESETS */}
+
+      <div className="mb-5">
+        <div className="mb-2 text-xs font-semibold text-[var(--text-secondary)]">
+          Presets
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          {PRESETS.map((preset) => {
+            const isActive =
+              preset.label === "Original"
+                ? width === imageWidth && height === imageHeight
+                : width === preset.width &&
+                  height === preset.height;
+
+            return (
+              <button
+                key={preset.label}
+                type="button"
+                onClick={() => applyPreset(preset)}
+                className={`flex items-center justify-between rounded-[var(--radius-md)] border px-3 py-2.5 text-left transition ${
+                  isActive
+                    ? "border-[var(--brand)] bg-[var(--brand-light)]"
+                    : "border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)]"
+                }`}
+              >
+                <span className="min-w-0">
+                  <span className="block text-xs font-medium text-[var(--text)]">
+                    {preset.label}
+                  </span>
+
+                  <span className="mt-0.5 block text-[10px] text-[var(--text-muted)]">
+                    {preset.label === "Original"
+                      ? `${imageWidth} × ${imageHeight}`
+                      : `${preset.width} × ${preset.height}`}
+                  </span>
+                </span>
+
+                {isActive && (
+                  <Check
+                    size={13}
+                    className="shrink-0 text-[var(--brand)]"
+                  />
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* DIMENSIONS */}
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <DimensionField
-          label="Width"
-          value={resize.width}
-          onChange={setWidth}
-        />
+      <div className="mb-4">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-xs font-semibold text-[var(--text-secondary)]">
+            Dimensions
+          </span>
 
-        <DimensionField
-          label="Height"
-          value={resize.height}
-          onChange={setHeight}
-        />
+          <button
+            type="button"
+            onClick={swapDimensions}
+            title="Swap width and height"
+            className="flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-[10px] font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
+          >
+            <ArrowLeftRight size={12} />
+            Swap
+          </button>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <DimensionField
+            label="Width"
+            value={width}
+            onChange={setWidth}
+          />
+
+          <DimensionField
+            label="Height"
+            value={height}
+            onChange={setHeight}
+          />
+        </div>
       </div>
 
-      {/* ASPECT RATIO LOCK */}
+      {/* ASPECT LOCK */}
 
       <button
         type="button"
@@ -185,17 +392,21 @@ export default function ResizeTool({
           })
         }
         aria-pressed={resize.lockAspectRatio}
-        className={`mt-4 flex w-full items-center gap-3 rounded-[var(--radius-md)] border p-3 text-left transition ${
+        className={`flex w-full items-center gap-3 rounded-[var(--radius-md)] border p-3 text-left transition ${
           resize.lockAspectRatio
             ? "border-[var(--brand)] bg-[var(--brand-light)]"
-            : "border-[var(--border)] bg-[var(--surface)]"
+            : "border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)]"
         }`}
       >
         <span
-          className="text-base"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface)]"
           aria-hidden="true"
         >
-          {resize.lockAspectRatio ? "🔗" : "⛓️"}
+          {resize.lockAspectRatio ? (
+            <Lock size={14} />
+          ) : (
+            <Unlock size={14} />
+          )}
         </span>
 
         <span className="min-w-0">
@@ -203,32 +414,115 @@ export default function ResizeTool({
             Maintain aspect ratio
           </span>
 
-          <span className="mt-0.5 block text-[11px] text-[var(--text-muted)]">
-            Prevent the source image from being stretched.
+          <span className="mt-0.5 block text-[11px] leading-4 text-[var(--text-muted)]">
+            {resize.lockAspectRatio
+              ? "Changing one dimension automatically updates the other."
+              : "Width and height can be changed independently."}
           </span>
         </span>
       </button>
 
-      {/* DIFFERENT ASPECT RATIO WARNING */}
+      {/* RESIZE MODE */}
+
+      <div className="mt-5">
+        <div className="mb-2">
+          <div className="text-xs font-semibold text-[var(--text-secondary)]">
+            Resize mode
+          </div>
+
+          <div className="mt-1 text-[10px] leading-4 text-[var(--text-muted)]">
+            Controls how the source image occupies the output canvas.
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          {RESIZE_MODES.map((mode) => {
+            const active = resize.mode === mode.id;
+
+            return (
+              <button
+                key={mode.id}
+                type="button"
+                onClick={() =>
+                  onChange({
+                    mode: mode.id,
+                  })
+                }
+                aria-pressed={active}
+                className={`flex w-full items-start gap-3 rounded-[var(--radius-md)] border p-3 text-left transition ${
+                  active
+                    ? "border-[var(--brand)] bg-[var(--brand-light)]"
+                    : "border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)]"
+                }`}
+              >
+                <span
+                  className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                    active
+                      ? "border-[var(--brand)]"
+                      : "border-[var(--border-strong)]"
+                  }`}
+                >
+                  {active && (
+                    <span className="h-2 w-2 rounded-full bg-[var(--brand)]" />
+                  )}
+                </span>
+
+                <span>
+                  <span className="block text-xs font-semibold text-[var(--text)]">
+                    {mode.label}
+                  </span>
+
+                  <span className="mt-0.5 block text-[10px] leading-4 text-[var(--text-muted)]">
+                    {mode.description}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* DIFFERENT RATIO */}
 
       {aspectRatioChanged && (
         <div className="mt-4 rounded-[var(--radius-md)] border border-[var(--warning)]/30 bg-[var(--warning-bg)] p-3">
-          <div className="text-xs font-semibold text-[var(--text)]">
+          <div className="flex items-center gap-2 text-xs font-semibold text-[var(--text)]">
+            <Maximize2 size={13} />
             Different aspect ratio
           </div>
 
           <p className="mt-1 text-[11px] leading-5 text-[var(--text-muted)]">
-            Your original image is {formatRatio(imageWidth, imageHeight)},
-            while the requested output is{" "}
-            {formatRatio(resize.width, resize.height)}.
+            Original:{" "}
+            <strong>
+              {formatRatio(imageWidth, imageHeight)}
+            </strong>
+            {" · "}
+            Output:{" "}
+            <strong>
+              {formatRatio(width, height)}
+            </strong>
           </p>
 
-          <p className="mt-2 text-[11px] leading-5 text-[var(--text-muted)]">
-            A square image cannot naturally become a rectangle without
-            changing the composition. The editor will preserve the image
-            proportions and use the output canvas around it rather than
-            stretching the image.
-          </p>
+          {resize.mode === "fit" && (
+            <p className="mt-2 text-[11px] leading-5 text-[var(--text-muted)]">
+              Fit mode preserves the complete image and leaves unused
+              canvas space around it.
+            </p>
+          )}
+
+          {resize.mode === "fill" && (
+            <p className="mt-2 text-[11px] leading-5 text-[var(--text-muted)]">
+              Fill mode preserves the image proportions but crops the
+              parts that extend beyond the output canvas.
+            </p>
+          )}
+
+          {resize.mode === "stretch" && (
+            <p className="mt-2 text-[11px] leading-5 text-[var(--text-muted)]">
+              Stretch mode fills the canvas completely but may distort
+              the image.
+            </p>
+          )}
 
           {resize.lockAspectRatio && (
             <button
@@ -242,7 +536,7 @@ export default function ResizeTool({
         </div>
       )}
 
-      {/* RATIO INFORMATION */}
+      {/* OUTPUT INFORMATION */}
 
       <div className="mt-4 rounded-[var(--radius-md)] bg-[var(--surface-muted)] p-3">
         <div className="flex items-center justify-between gap-3">
@@ -261,7 +555,7 @@ export default function ResizeTool({
           </span>
 
           <span className="font-mono text-xs text-[var(--text)]">
-            {formatRatio(resize.width, resize.height)}
+            {formatRatio(width, height)}
           </span>
         </div>
 
@@ -276,6 +570,21 @@ export default function ResizeTool({
         </div>
       </div>
 
+      {/* LARGE IMAGE WARNING */}
+
+      {megapixels >= 40 && (
+        <div className="mt-3 rounded-[var(--radius-md)] border border-[var(--warning)]/30 bg-[var(--warning-bg)] p-3">
+          <div className="text-xs font-semibold text-[var(--text)]">
+            Large output
+          </div>
+
+          <p className="mt-1 text-[11px] leading-5 text-[var(--text-muted)]">
+            This output is {megapixels.toFixed(1)} MP. Large canvases
+            may require more browser memory during export.
+          </p>
+        </div>
+      )}
+
       {/* RESET */}
 
       <button
@@ -285,10 +594,12 @@ export default function ResizeTool({
             width: imageWidth,
             height: imageHeight,
             lockAspectRatio: true,
+            mode: "fit",
           })
         }
-        className="mt-4 w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-xs font-medium text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)]"
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-xs font-medium text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)]"
       >
+        <Minimize2 size={13} />
         Reset to original
       </button>
     </section>
@@ -317,17 +628,31 @@ function DimensionField({
           id={id}
           type="number"
           min={1}
+          max={32768}
+          step={1}
           value={value}
           onChange={(event) => {
-            const numericValue = Number(event.target.value);
+            const raw = event.target.value;
+
+            if (!raw) {
+              onChange(1);
+              return;
+            }
+
+            const numericValue = Number(raw);
+
+            if (!Number.isFinite(numericValue)) {
+              return;
+            }
 
             onChange(
-              Number.isFinite(numericValue)
-                ? Math.max(1, numericValue)
-                : 1,
+              Math.min(
+                32768,
+                Math.max(1, Math.round(numericValue)),
+              ),
             );
           }}
-          className="h-11 w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 pr-12 text-sm text-[var(--text)] outline-none focus:border-[var(--brand)]"
+          className="h-11 w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 pr-12 text-sm text-[var(--text)] outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/10"
         />
 
         <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted)]">

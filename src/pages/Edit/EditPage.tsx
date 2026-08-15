@@ -1013,9 +1013,9 @@ export default function EditPage() {
 
       if (event.key === "Escape") {
         setMobileToolsOpen(false);
+        setMobileInspectorOpen(false);
         return;
       }
-
       switch (event.key.toLowerCase()) {
         case "1":
           setActiveTool("image");
@@ -2028,28 +2028,62 @@ export default function EditPage() {
           >
             <button
               type="button"
-              title="Toggle left panel"
+              title={leftPanelOpen ? "Hide tools panel" : "Show tools panel"}
+              aria-label={
+                leftPanelOpen ? "Hide tools panel" : "Show tools panel"
+              }
               onClick={() => setLeftPanelOpen((current) => !current)}
               className="
-                hidden h-8 w-8
-                items-center
-                justify-center
-                rounded-lg
-                text-[var(--text-muted)]
-                hover:bg-[var(--surface-muted)]
-                hover:text-[var(--text)]
-                lg:flex
-              "
+    hidden h-8 w-8
+    items-center
+    justify-center
+    rounded-lg
+    text-[var(--text-muted)]
+    transition
+    hover:bg-[var(--surface-muted)]
+    hover:text-[var(--text)]
+    lg:flex
+  "
             >
               <PanelLeft size={14} />
             </button>
 
+            <button
+              type="button"
+              title={
+                rightPanelOpen
+                  ? "Hide properties panel"
+                  : "Show properties panel"
+              }
+              aria-label={
+                rightPanelOpen
+                  ? "Hide properties panel"
+                  : "Show properties panel"
+              }
+              onClick={() => setRightPanelOpen((current) => !current)}
+              className={`
+    hidden h-8 w-8
+    items-center
+    justify-center
+    rounded-lg
+    transition
+    lg:flex
+    ${
+      rightPanelOpen
+        ? "text-[var(--brand)] hover:bg-[var(--brand-light)]"
+        : "text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
+    }
+  `}
+            >
+              <PanelRight size={14} />
+            </button>
+
             <div
               className="
-                hidden h-5 w-px
-                bg-[var(--border)]
-                lg:block
-              "
+    hidden h-5 w-px
+    bg-[var(--border)]
+    lg:block
+  "
             />
 
             <button
@@ -2170,11 +2204,12 @@ export default function EditPage() {
 
           <div
             className="
-              absolute
-              left-3 top-16
-              z-40
-              lg:hidden
-            "
+    absolute
+    left-3 top-16
+    z-40
+    flex items-center gap-1.5
+    lg:hidden
+  "
           >
             <button
               type="button"
@@ -2422,7 +2457,7 @@ bg-[var(--editor-panel)]
 transition-all
 duration-200
 lg:block
-           ${rightPanelOpen ? "w-[280px] xl:w-[320px]" : "w-0 overflow-hidden"}
+          ${rightPanelOpen ? "w-[280px] xl:w-[320px]" : "w-0 overflow-hidden"}
           `}
         >
           <div
@@ -2464,21 +2499,6 @@ lg:block
                   {activeToolDefinition.description}
                 </div>
               </div>
-
-              <button
-                type="button"
-                onClick={() => setRightPanelOpen((current) => !current)}
-                className="
-                  flex h-7 w-7
-                  items-center justify-center
-                  rounded-lg
-                  text-[var(--text-muted)]
-                  hover:bg-[var(--surface-muted)]
-                  hover:text-[var(--text)]
-                "
-              >
-                <PanelRight size={13} />
-              </button>
             </div>
 
             {/* CONTENT */}
@@ -2560,23 +2580,49 @@ lg:block
           lg:hidden
         "
       >
-        <button
-          type="button"
-          onClick={() => setMobileToolsOpen(true)}
-          className="
-            flex h-9
-            items-center gap-2
-            rounded-lg
-            px-3
-            text-[10px]
-            text-[var(--text-muted)]
-            hover:bg-[var(--surface-muted)]
-            hover:text-[var(--text)]
-          "
-        >
-          <SlidersHorizontal size={14} />
-          Tools
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setMobileToolsOpen(true)}
+            className="
+      flex h-9
+      items-center gap-2
+      rounded-lg
+      px-3
+      text-[10px]
+      text-[var(--text-muted)]
+      transition
+      hover:bg-[var(--surface-muted)]
+      hover:text-[var(--text)]
+    "
+          >
+            <SlidersHorizontal size={14} />
+            Tools
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMobileInspectorOpen(true)}
+            className="
+      flex h-9
+      items-center gap-2
+      rounded-lg
+      border
+      border-[var(--border)]
+      bg-[var(--surface)]
+      px-3
+      text-[10px]
+      font-medium
+      text-[var(--text-secondary)]
+      transition
+      hover:bg-[var(--surface-muted)]
+      hover:text-[var(--text)]
+    "
+          >
+            <PanelRight size={14} />
+            Edit
+          </button>
+        </div>
 
         <div
           className="
@@ -2806,7 +2852,7 @@ lg:block
           className="
       fixed inset-0
       z-[450]
-      xl:hidden
+      lg:hidden
     "
         >
           <button

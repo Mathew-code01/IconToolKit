@@ -1,8 +1,11 @@
 // src/pages/Edit/ImageEditorTool.tsx
 // src/pages/Edit/ImageEditorTool.tsx
 
+// src/pages/Edit/ImageEditorTool.tsx
+
 import type {
   BackgroundSettings,
+  CropSettings,
   PaddingSettings,
   ResizeSettings,
   RotateFlipSettings,
@@ -17,6 +20,7 @@ export interface ImageEditorToolProps {
   imageType: string;
   background: BackgroundSettings;
   padding: PaddingSettings;
+  crop: CropSettings | null;
   resize: ResizeSettings;
   rotateFlip: RotateFlipSettings;
   roundedCorners: RoundedCornersSettings;
@@ -116,6 +120,31 @@ function getRoundedRadius(
   return Math.min(width, height) * radius;
 }
 
+/**
+ * Calculates the dimensions of the rotated rectangle.
+ *
+ * For 90° and 270°, width and height are effectively swapped.
+ */
+function getRotatedBounds(
+  width: number,
+  height: number,
+  rotation: number,
+) {
+  const normalized = ((rotation % 360) + 360) % 360;
+
+  if (normalized === 90 || normalized === 270) {
+    return {
+      width: height,
+      height: width,
+    };
+  }
+
+  return {
+    width,
+    height,
+  };
+}
+
 function ComposedImage({
   imageUrl,
   imageWidth,
@@ -125,6 +154,7 @@ function ComposedImage({
   rotateFlip,
   roundedCorners,
   background,
+  zoom = 100,
 }: Pick<
   ImageEditorToolProps,
   | "imageUrl"
@@ -135,7 +165,9 @@ function ComposedImage({
   | "rotateFlip"
   | "roundedCorners"
   | "background"
->) {
+> & {
+  zoom?: number;
+}) {
   const outputWidth = Math.max(1, resize.width);
   const outputHeight = Math.max(1, resize.height);
 
@@ -157,49 +189,83 @@ function ComposedImage({
     resize.mode,
   );
 
+  const rotatedBounds = getRotatedBounds(
+    layout.width,
+    layout.height,
+    rotateFlip.rotation,
+  );
+
   const radius = getRoundedRadius(
     layout.width,
     layout.height,
     roundedCorners.radius,
   );
 
+  /**
+   * IMPORTANT:
+   *
+   * layout.width / layout.height are the REAL composition
+   * dimensions.
+   *
+   * We calculate a separate visual scale so a large image
+   * fits inside the browser preview.
+   */
+  const fitScale =
+    rotatedBounds.width > 0 && rotatedBounds.height > 0
+      ? Math.min(
+          availableWidth / rotatedBounds.width,
+          availableHeight / rotatedBounds.height,
+        )
+      : 1;
+
+  /**
+   * Keep normal zoom at 100%.
+   *
+   * The slider can then zoom in/out relative to the
+   * automatically fitted image.
+   */
+  const visualScale =
+    Math.max(0.01, fitScale) * (clamp(zoom, 25, 400) / 100);
+
   const transform = [
+    `translate(-50%, -50%)`,
     `rotate(${rotateFlip.rotation}deg)`,
     `scaleX(${rotateFlip.flipHorizontal ? -1 : 1})`,
     `scaleY(${rotateFlip.flipVertical ? -1 : 1})`,
+    `scale(${visualScale})`,
   ].join(" ");
 
   const imageStyle: React.CSSProperties = {
-    width: `${Math.max(0, layout.width)}px`,
-    height: `${Math.max(0, layout.height)}px`,
+    position: "absolute",
+    left: "50%",
+    top: "50%",
+    width: `${Math.max(1, layout.width)}px`,
+    height: `${Math.max(1, layout.height)}px`,
     maxWidth: "none",
     maxHeight: "none",
     objectFit: "fill",
     transform,
-    borderRadius:
-      resize.mode === "fill"
-        ? `${radius}px`
-        : `${radius}px`,
+    transformOrigin: "center center",
+    borderRadius: `${radius}px`,
   };
 
   return (
     <div
       className="relative h-full w-full overflow-hidden"
-      style={{
-        ...backgroundStyle(background),
-      }}
+      style={backgroundStyle(background)}
     >
       {imageUrl ? (
-        <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-          <div
-            className="relative flex items-center justify-center overflow-hidden"
-            style={{
-              width: `${availableWidth}px`,
-              height: `${availableHeight}px`,
-              maxWidth: "100%",
-              maxHeight: "100%",
-            }}
-          >
+        <div
+          className="absolute inset-0 overflow-hidden"
+          style={{
+            paddingTop: `${padding.top}px`,
+            paddingRight: `${padding.right}px`,
+            paddingBottom: `${padding.bottom}px`,
+            paddingLeft: `${padding.left}px`,
+            boxSizing: "border-box",
+          }}
+        >
+          <div className="relative h-full w-full overflow-hidden">
             <img
               src={imageUrl}
               alt=""
@@ -234,6 +300,7 @@ export default function ImageEditorTool({
   imageType,
   background,
   padding,
+  crop,
   resize,
   rotateFlip,
   roundedCorners,
@@ -252,6 +319,7 @@ export default function ImageEditorTool({
         rotateFlip={rotateFlip}
         roundedCorners={roundedCorners}
         background={background}
+        zoom={100}
       />
     );
   }
@@ -259,15 +327,14 @@ export default function ImageEditorTool({
   return (
     <section className="w-full p-4">
       <div className="mb-4">
-        <h3 className="text-sm font-semibold text-[var(--text)]">
-          Image
-        </h3>
+        <h3 className="text-sm font-semibold text-[var(--text)]">Image</h3>
 
         <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
           Preview the final composition and output dimensions.
         </p>
       </div>
 
+      {/* Preview */}
       <div
         className="relative w-full overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-muted)]"
         style={{
@@ -286,14 +353,14 @@ export default function ImageEditorTool({
           rotateFlip={rotateFlip}
           roundedCorners={roundedCorners}
           background={background}
+          zoom={zoom}
         />
       </div>
 
+      {/* Final canvas information */}
       <div className="mt-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-subtle)] p-3">
         <div className="flex items-center justify-between gap-3">
-          <span className="text-xs text-[var(--text-muted)]">
-            Final canvas
-          </span>
+          <span className="text-xs text-[var(--text-muted)]">Final canvas</span>
 
           <span className="font-mono text-xs font-semibold text-[var(--brand)]">
             {resize.width} × {resize.height}px
@@ -301,9 +368,7 @@ export default function ImageEditorTool({
         </div>
 
         <div className="mt-2 flex items-center justify-between gap-3">
-          <span className="text-xs text-[var(--text-muted)]">
-            Resize mode
-          </span>
+          <span className="text-xs text-[var(--text-muted)]">Resize mode</span>
 
           <span className="text-xs font-medium capitalize text-[var(--text)]">
             {resize.mode}
@@ -322,15 +387,19 @@ export default function ImageEditorTool({
         </p>
       </div>
 
+      {/* Image information */}
       <div className="mt-4 space-y-2 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
-        <InfoRow
-          label="File name"
-          value={imageName}
-        />
+        <InfoRow label="File name" value={imageName} />
+
+        <InfoRow label="Original" value={`${imageWidth} × ${imageHeight}px`} />
 
         <InfoRow
-          label="Original"
-          value={`${imageWidth} × ${imageHeight}px`}
+          label="Crop"
+          value={
+            crop
+              ? `${Math.round(crop.width)} × ${Math.round(crop.height)}px`
+              : `${imageWidth} × ${imageHeight}px`
+          }
         />
 
         <InfoRow
@@ -340,13 +409,11 @@ export default function ImageEditorTool({
 
         <InfoRow
           label="Format"
-          value={
-            imageType.replace("image/", "").toUpperCase() ||
-            "—"
-          }
+          value={imageType.replace("image/", "").toUpperCase() || "—"}
         />
       </div>
 
+      {/* Zoom */}
       <div className="mt-4">
         <div className="mb-2 flex items-center justify-between">
           <label
@@ -367,11 +434,15 @@ export default function ImageEditorTool({
           min={25}
           max={400}
           value={zoom}
-          onChange={(event) =>
-            onZoomChange(Number(event.target.value))
-          }
+          onChange={(event) => onZoomChange(Number(event.target.value))}
           className="w-full accent-[var(--brand)]"
         />
+
+        <div className="mt-1 flex justify-between text-[9px] text-[var(--text-muted)]">
+          <span>25%</span>
+          <span>100%</span>
+          <span>400%</span>
+        </div>
       </div>
     </section>
   );
