@@ -1,6 +1,5 @@
 // src/pages/Edit/ImageEditorTool.tsx
 // src/pages/Edit/ImageEditorTool.tsx
-
 // src/pages/Edit/ImageEditorTool.tsx
 
 import type {
@@ -29,11 +28,7 @@ export interface ImageEditorToolProps {
   previewOnly?: boolean;
 }
 
-function clamp(
-  value: number,
-  min: number,
-  max: number,
-) {
+function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
@@ -61,6 +56,19 @@ function backgroundStyle(
   };
 }
 
+/**
+ * Calculates the image dimensions inside the available canvas.
+ *
+ * FIT:
+ * Entire image remains visible.
+ *
+ * FILL:
+ * Canvas is completely filled.
+ * Overflow is intentionally cropped.
+ *
+ * STRETCH:
+ * Image is forced to the exact canvas dimensions.
+ */
 function getResizeLayout(
   sourceWidth: number,
   sourceHeight: number,
@@ -110,6 +118,12 @@ function getResizeLayout(
   };
 }
 
+/**
+ * Calculates rounded-corner radius from a percentage.
+ *
+ * This is intentionally used by the preview so the
+ * Rounded Corners feature remains part of the composition.
+ */
 function getRoundedRadius(
   width: number,
   height: number,
@@ -121,9 +135,9 @@ function getRoundedRadius(
 }
 
 /**
- * Calculates the dimensions of the rotated rectangle.
+ * Returns the bounds of a rectangle after rotation.
  *
- * For 90° and 270°, width and height are effectively swapped.
+ * 90° and 270° swap width and height.
  */
 function getRotatedBounds(
   width: number,
@@ -145,6 +159,20 @@ function getRotatedBounds(
   };
 }
 
+/**
+ * The actual image composition.
+ *
+ * IMPORTANT:
+ *
+ * The browser preview is responsive.
+ *
+ * The resize values such as 4000 × 3000 are OUTPUT PIXELS.
+ *
+ * They are NOT used directly as CSS pixels.
+ *
+ * Instead, the image is represented as a percentage of the
+ * responsive preview canvas.
+ */
 function ComposedImage({
   imageUrl,
   imageWidth,
@@ -168,8 +196,20 @@ function ComposedImage({
 > & {
   zoom?: number;
 }) {
+  /*
+   * -------------------------------------------------------
+   * OUTPUT DIMENSIONS
+   * -------------------------------------------------------
+   */
+
   const outputWidth = Math.max(1, resize.width);
   const outputHeight = Math.max(1, resize.height);
+
+  /*
+   * -------------------------------------------------------
+   * AVAILABLE COMPOSITION AREA
+   * -------------------------------------------------------
+   */
 
   const availableWidth = Math.max(
     1,
@@ -181,6 +221,12 @@ function ComposedImage({
     outputHeight - padding.top - padding.bottom,
   );
 
+  /*
+   * -------------------------------------------------------
+   * IMAGE LAYOUT
+   * -------------------------------------------------------
+   */
+
   const layout = getResizeLayout(
     imageWidth,
     imageHeight,
@@ -189,64 +235,185 @@ function ComposedImage({
     resize.mode,
   );
 
+  /*
+   * -------------------------------------------------------
+   * ROTATED BOUNDS
+   * -------------------------------------------------------
+   */
+
   const rotatedBounds = getRotatedBounds(
     layout.width,
     layout.height,
     rotateFlip.rotation,
   );
 
-  const radius = getRoundedRadius(
-    layout.width,
-    layout.height,
-    roundedCorners.radius,
-  );
-
-  /**
-   * IMPORTANT:
+  /*
+   * -------------------------------------------------------
+   * AUTOMATIC FIT
+   * -------------------------------------------------------
    *
-   * layout.width / layout.height are the REAL composition
-   * dimensions.
+   * This makes BOTH small and huge images fit correctly
+   * inside the responsive preview.
    *
-   * We calculate a separate visual scale so a large image
-   * fits inside the browser preview.
+   * We calculate against the available composition area,
+   * not the raw browser dimensions.
    */
+
   const fitScale =
-    rotatedBounds.width > 0 && rotatedBounds.height > 0
+    rotatedBounds.width > 0 &&
+    rotatedBounds.height > 0
       ? Math.min(
           availableWidth / rotatedBounds.width,
           availableHeight / rotatedBounds.height,
         )
       : 1;
 
-  /**
-   * Keep normal zoom at 100%.
+  /*
+   * -------------------------------------------------------
+   * USER ZOOM
+   * -------------------------------------------------------
    *
-   * The slider can then zoom in/out relative to the
-   * automatically fitted image.
+   * 100% = automatically fitted.
+   *
+   * Below 100% = zoom out.
+   *
+   * Above 100% = zoom in.
    */
-  const visualScale =
-    Math.max(0.01, fitScale) * (clamp(zoom, 25, 400) / 100);
+
+  const zoomScale = clamp(zoom, 25, 400) / 100;
+
+  const visualScale = Math.max(0.01, fitScale) * zoomScale;
+
+  /*
+   * -------------------------------------------------------
+   * RESPONSIVE IMAGE SIZE
+   * -------------------------------------------------------
+   *
+   * Convert the real output-pixel dimensions into
+   * percentages of the available preview area.
+   *
+   * This prevents a 4000px image from becoming a
+   * 4000px-wide browser element.
+   */
+
+  const imageWidthPercent =
+    (layout.width / availableWidth) * 100;
+
+  const imageHeightPercent =
+    (layout.height / availableHeight) * 100;
+
+  /*
+   * -------------------------------------------------------
+   * RESPONSIVE PADDING
+   * -------------------------------------------------------
+   */
+
+  const paddingTopPercent =
+    (padding.top / outputHeight) * 100;
+
+  const paddingRightPercent =
+    (padding.right / outputWidth) * 100;
+
+  const paddingBottomPercent =
+    (padding.bottom / outputHeight) * 100;
+
+  const paddingLeftPercent =
+    (padding.left / outputWidth) * 100;
+
+  /*
+   * -------------------------------------------------------
+   * ROUNDED CORNERS
+   * -------------------------------------------------------
+   *
+   * IMPORTANT:
+   *
+   * We actually use getRoundedRadius here.
+   *
+   * The function calculates the radius in the same coordinate
+   * system as the image composition.
+   *
+   * Then we convert that radius into a percentage so the
+   * browser can scale it responsively.
+   */
+
+  const radiusPixels = getRoundedRadius(
+    layout.width,
+    layout.height,
+    roundedCorners.radius,
+  );
+
+  const radiusPercent =
+    Math.min(layout.width, layout.height) > 0
+      ? (radiusPixels /
+          Math.min(layout.width, layout.height)) *
+        100
+      : 0;
+
+  /*
+   * -------------------------------------------------------
+   * IMAGE TRANSFORM
+   * -------------------------------------------------------
+   */
 
   const transform = [
-    `translate(-50%, -50%)`,
+    "translate(-50%, -50%)",
     `rotate(${rotateFlip.rotation}deg)`,
     `scaleX(${rotateFlip.flipHorizontal ? -1 : 1})`,
     `scaleY(${rotateFlip.flipVertical ? -1 : 1})`,
     `scale(${visualScale})`,
   ].join(" ");
 
+  /*
+   * -------------------------------------------------------
+   * IMAGE STYLE
+   * -------------------------------------------------------
+   */
+
   const imageStyle: React.CSSProperties = {
     position: "absolute",
+
     left: "50%",
     top: "50%",
-    width: `${Math.max(1, layout.width)}px`,
-    height: `${Math.max(1, layout.height)}px`,
+
+    /*
+     * IMPORTANT:
+     *
+     * These are percentages, NOT raw image pixels.
+     *
+     * This is what makes large images behave correctly.
+     */
+
+    width: `${imageWidthPercent}%`,
+    height: `${imageHeightPercent}%`,
+
     maxWidth: "none",
     maxHeight: "none",
+
+    /*
+     * The resize mode has already calculated the correct
+     * dimensions, so the browser should not independently
+     * decide how the image fits.
+     */
+
     objectFit: "fill",
+
     transform,
     transformOrigin: "center center",
-    borderRadius: `${radius}px`,
+
+    /*
+     * Rounded corners remain responsive.
+     */
+
+    borderRadius:
+      radiusPercent > 0
+        ? `${radiusPercent}%`
+        : "0",
+
+    /*
+     * Prevent inline-image baseline behavior.
+     */
+
+    display: "block",
   };
 
   return (
@@ -258,14 +425,24 @@ function ComposedImage({
         <div
           className="absolute inset-0 overflow-hidden"
           style={{
-            paddingTop: `${padding.top}px`,
-            paddingRight: `${padding.right}px`,
-            paddingBottom: `${padding.bottom}px`,
-            paddingLeft: `${padding.left}px`,
+            paddingTop: `${paddingTopPercent}%`,
+            paddingRight: `${paddingRightPercent}%`,
+            paddingBottom: `${paddingBottomPercent}%`,
+            paddingLeft: `${paddingLeftPercent}%`,
             boxSizing: "border-box",
           }}
         >
-          <div className="relative h-full w-full overflow-hidden">
+          <div
+            className="relative h-full w-full overflow-hidden"
+            style={{
+              /*
+               * Keep the composition area stable.
+               */
+
+              minWidth: 0,
+              minHeight: 0,
+            }}
+          >
             <img
               src={imageUrl}
               alt=""
@@ -281,9 +458,13 @@ function ComposedImage({
         </div>
       )}
 
+      {/* OUTPUT DIMENSIONS */}
+
       <div className="pointer-events-none absolute bottom-2 left-2 rounded-md bg-black/60 px-2 py-1 text-[9px] font-medium text-white backdrop-blur-sm">
         {resize.width} × {resize.height}px
       </div>
+
+      {/* RESIZE MODE */}
 
       <div className="pointer-events-none absolute bottom-2 right-2 rounded-md bg-black/60 px-2 py-1 text-[9px] font-medium text-white backdrop-blur-sm">
         {resize.mode}
@@ -308,6 +489,12 @@ export default function ImageEditorTool({
   onZoomChange,
   previewOnly = false,
 }: ImageEditorToolProps) {
+  /*
+   * -------------------------------------------------------
+   * PREVIEW ONLY
+   * -------------------------------------------------------
+   */
+
   if (previewOnly) {
     return (
       <ComposedImage
@@ -326,17 +513,34 @@ export default function ImageEditorTool({
 
   return (
     <section className="w-full p-4">
+      {/* ---------------------------------------------------
+          HEADER
+      --------------------------------------------------- */}
+
       <div className="mb-4">
-        <h3 className="text-sm font-semibold text-[var(--text)]">Image</h3>
+        <h3 className="text-sm font-semibold text-[var(--text)]">
+          Image
+        </h3>
 
         <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
           Preview the final composition and output dimensions.
         </p>
       </div>
 
-      {/* Preview */}
+      {/* ---------------------------------------------------
+          PREVIEW
+      --------------------------------------------------- */}
+
       <div
-        className="relative w-full overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-muted)]"
+        className="
+          relative
+          w-full
+          overflow-hidden
+          rounded-[var(--radius-lg)]
+          border
+          border-[var(--border)]
+          bg-[var(--surface-muted)]
+        "
         style={{
           aspectRatio:
             resize.width && resize.height
@@ -357,10 +561,24 @@ export default function ImageEditorTool({
         />
       </div>
 
-      {/* Final canvas information */}
-      <div className="mt-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-subtle)] p-3">
+      {/* ---------------------------------------------------
+          FINAL CANVAS INFORMATION
+      --------------------------------------------------- */}
+
+      <div
+        className="
+          mt-3
+          rounded-[var(--radius-md)]
+          border
+          border-[var(--border)]
+          bg-[var(--surface-subtle)]
+          p-3
+        "
+      >
         <div className="flex items-center justify-between gap-3">
-          <span className="text-xs text-[var(--text-muted)]">Final canvas</span>
+          <span className="text-xs text-[var(--text-muted)]">
+            Final canvas
+          </span>
 
           <span className="font-mono text-xs font-semibold text-[var(--brand)]">
             {resize.width} × {resize.height}px
@@ -368,7 +586,9 @@ export default function ImageEditorTool({
         </div>
 
         <div className="mt-2 flex items-center justify-between gap-3">
-          <span className="text-xs text-[var(--text-muted)]">Resize mode</span>
+          <span className="text-xs text-[var(--text-muted)]">
+            Resize mode
+          </span>
 
           <span className="text-xs font-medium capitalize text-[var(--text)]">
             {resize.mode}
@@ -387,11 +607,30 @@ export default function ImageEditorTool({
         </p>
       </div>
 
-      {/* Image information */}
-      <div className="mt-4 space-y-2 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
-        <InfoRow label="File name" value={imageName} />
+      {/* ---------------------------------------------------
+          IMAGE INFORMATION
+      --------------------------------------------------- */}
 
-        <InfoRow label="Original" value={`${imageWidth} × ${imageHeight}px`} />
+      <div
+        className="
+          mt-4
+          space-y-2
+          rounded-[var(--radius-lg)]
+          border
+          border-[var(--border)]
+          bg-[var(--surface-subtle)]
+          p-4
+        "
+      >
+        <InfoRow
+          label="File name"
+          value={imageName}
+        />
+
+        <InfoRow
+          label="Original"
+          value={`${imageWidth} × ${imageHeight}px`}
+        />
 
         <InfoRow
           label="Crop"
@@ -409,11 +648,17 @@ export default function ImageEditorTool({
 
         <InfoRow
           label="Format"
-          value={imageType.replace("image/", "").toUpperCase() || "—"}
+          value={
+            imageType.replace("image/", "").toUpperCase() ||
+            "—"
+          }
         />
       </div>
 
-      {/* Zoom */}
+      {/* ---------------------------------------------------
+          ZOOM
+      --------------------------------------------------- */}
+
       <div className="mt-4">
         <div className="mb-2 flex items-center justify-between">
           <label
@@ -423,7 +668,16 @@ export default function ImageEditorTool({
             Canvas zoom
           </label>
 
-          <span className="rounded-md bg-[var(--surface-muted)] px-2 py-1 text-xs font-medium text-[var(--text)]">
+          <span
+            className="
+              rounded-md
+              bg-[var(--surface-muted)]
+              px-2 py-1
+              text-xs
+              font-medium
+              text-[var(--text)]
+            "
+          >
             {zoom}%
           </span>
         </div>
@@ -434,7 +688,9 @@ export default function ImageEditorTool({
           min={25}
           max={400}
           value={zoom}
-          onChange={(event) => onZoomChange(Number(event.target.value))}
+          onChange={(event) =>
+            onZoomChange(Number(event.target.value))
+          }
           className="w-full accent-[var(--brand)]"
         />
 
@@ -447,6 +703,10 @@ export default function ImageEditorTool({
     </section>
   );
 }
+
+/* =========================================================
+   INFO ROW
+========================================================= */
 
 function InfoRow({
   label,
