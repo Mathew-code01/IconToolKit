@@ -1,7 +1,5 @@
 // src/pages/Edit/ImageEditorTool.tsx
 // src/pages/Edit/ImageEditorTool.tsx
-// src/pages/Edit/ImageEditorTool.tsx
-// src/pages/Edit/ImageEditorTool.tsx
 
 import type {
   BackgroundSettings,
@@ -27,6 +25,14 @@ export interface ImageEditorToolProps {
   previewOnly?: boolean;
 }
 
+function clamp(
+  value: number,
+  min: number,
+  max: number,
+) {
+  return Math.min(max, Math.max(min, value));
+}
+
 function backgroundStyle(
   background: BackgroundSettings,
 ): React.CSSProperties {
@@ -46,53 +52,68 @@ function backgroundStyle(
     backgroundImage:
       "linear-gradient(45deg, var(--surface-muted) 25%, transparent 25%), linear-gradient(-45deg, var(--surface-muted) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, var(--surface-muted) 75%), linear-gradient(-45deg, transparent 75%, var(--surface-muted) 75%)",
     backgroundSize: "16px 16px",
-    backgroundPosition: "0 0, 0 8px, 8px -8px, -8px 0px",
+    backgroundPosition:
+      "0 0, 0 8px, 8px -8px, -8px 0px",
   };
 }
 
-function getFitSize(
+function getResizeLayout(
   sourceWidth: number,
   sourceHeight: number,
   targetWidth: number,
   targetHeight: number,
+  mode: ResizeSettings["mode"],
 ) {
   if (
-    !sourceWidth ||
-    !sourceHeight ||
-    !targetWidth ||
-    !targetHeight
+    sourceWidth <= 0 ||
+    sourceHeight <= 0 ||
+    targetWidth <= 0 ||
+    targetHeight <= 0
   ) {
     return {
       width: 0,
       height: 0,
+      scaleX: 1,
+      scaleY: 1,
     };
   }
 
-  const scale = Math.min(
-    targetWidth / sourceWidth,
-    targetHeight / sourceHeight,
-  );
+  if (mode === "stretch") {
+    return {
+      width: targetWidth,
+      height: targetHeight,
+      scaleX: targetWidth / sourceWidth,
+      scaleY: targetHeight / sourceHeight,
+    };
+  }
+
+  const scale =
+    mode === "fill"
+      ? Math.max(
+          targetWidth / sourceWidth,
+          targetHeight / sourceHeight,
+        )
+      : Math.min(
+          targetWidth / sourceWidth,
+          targetHeight / sourceHeight,
+        );
 
   return {
     width: sourceWidth * scale,
     height: sourceHeight * scale,
+    scaleX: scale,
+    scaleY: scale,
   };
 }
 
-function getDisplayDimensions(
-  sourceWidth: number,
-  sourceHeight: number,
-  targetWidth: number,
-  targetHeight: number,
+function getRoundedRadius(
+  width: number,
+  height: number,
+  percentage: number,
 ) {
-  const fitted = getFitSize(
-    sourceWidth,
-    sourceHeight,
-    targetWidth,
-    targetHeight,
-  );
+  const radius = clamp(percentage, 0, 100) / 100;
 
-  return fitted;
+  return Math.min(width, height) * radius;
 }
 
 function ComposedImage({
@@ -115,63 +136,66 @@ function ComposedImage({
   | "roundedCorners"
   | "background"
 >) {
+  const outputWidth = Math.max(1, resize.width);
+  const outputHeight = Math.max(1, resize.height);
+
+  const availableWidth = Math.max(
+    1,
+    outputWidth - padding.left - padding.right,
+  );
+
+  const availableHeight = Math.max(
+    1,
+    outputHeight - padding.top - padding.bottom,
+  );
+
+  const layout = getResizeLayout(
+    imageWidth,
+    imageHeight,
+    availableWidth,
+    availableHeight,
+    resize.mode,
+  );
+
+  const radius = getRoundedRadius(
+    layout.width,
+    layout.height,
+    roundedCorners.radius,
+  );
+
   const transform = [
     `rotate(${rotateFlip.rotation}deg)`,
     `scaleX(${rotateFlip.flipHorizontal ? -1 : 1})`,
     `scaleY(${rotateFlip.flipVertical ? -1 : 1})`,
   ].join(" ");
 
-  const fitted = getDisplayDimensions(
-    imageWidth,
-    imageHeight,
-    resize.width,
-    resize.height,
-  );
-
-  const paddingHorizontal =
-    padding.left + padding.right;
-
-  const paddingVertical =
-    padding.top + padding.bottom;
-
-  const availableWidth = Math.max(
-    1,
-    resize.width - paddingHorizontal,
-  );
-
-  const availableHeight = Math.max(
-    1,
-    resize.height - paddingVertical,
-  );
-
-  const fittedInsidePadding = getFitSize(
-    imageWidth,
-    imageHeight,
-    availableWidth,
-    availableHeight,
-  );
-
-  const previewWidth =
-    fittedInsidePadding.width || fitted.width;
-
-  const previewHeight =
-    fittedInsidePadding.height || fitted.height;
+  const imageStyle: React.CSSProperties = {
+    width: `${Math.max(0, layout.width)}px`,
+    height: `${Math.max(0, layout.height)}px`,
+    maxWidth: "none",
+    maxHeight: "none",
+    objectFit: "fill",
+    transform,
+    borderRadius:
+      resize.mode === "fill"
+        ? `${radius}px`
+        : `${radius}px`,
+  };
 
   return (
     <div
       className="relative h-full w-full overflow-hidden"
       style={{
-        borderRadius: `${roundedCorners.radius}%`,
         ...backgroundStyle(background),
       }}
     >
       {imageUrl ? (
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
           <div
-            className="relative flex items-center justify-center"
+            className="relative flex items-center justify-center overflow-hidden"
             style={{
-              width: `${(previewWidth / resize.width) * 100}%`,
-              height: `${(previewHeight / resize.height) * 100}%`,
+              width: `${availableWidth}px`,
+              height: `${availableHeight}px`,
               maxWidth: "100%",
               maxHeight: "100%",
             }}
@@ -180,15 +204,8 @@ function ComposedImage({
               src={imageUrl}
               alt=""
               draggable={false}
-              className="block h-full w-full select-none object-contain"
-              style={{
-                transform,
-                paddingTop: `${(padding.top / Math.max(1, resize.height)) * 100}%`,
-                paddingRight: `${(padding.right / Math.max(1, resize.width)) * 100}%`,
-                paddingBottom: `${(padding.bottom / Math.max(1, resize.height)) * 100}%`,
-                paddingLeft: `${(padding.left / Math.max(1, resize.width)) * 100}%`,
-                boxSizing: "border-box",
-              }}
+              className="block select-none"
+              style={imageStyle}
             />
           </div>
         </div>
@@ -198,10 +215,12 @@ function ComposedImage({
         </div>
       )}
 
-      {/* OUTPUT SIZE LABEL */}
-
       <div className="pointer-events-none absolute bottom-2 left-2 rounded-md bg-black/60 px-2 py-1 text-[9px] font-medium text-white backdrop-blur-sm">
         {resize.width} × {resize.height}px
+      </div>
+
+      <div className="pointer-events-none absolute bottom-2 right-2 rounded-md bg-black/60 px-2 py-1 text-[9px] font-medium text-white backdrop-blur-sm">
+        {resize.mode}
       </div>
     </div>
   );
@@ -249,8 +268,6 @@ export default function ImageEditorTool({
         </p>
       </div>
 
-      {/* FINAL OUTPUT PREVIEW */}
-
       <div
         className="relative w-full overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-muted)]"
         style={{
@@ -283,10 +300,25 @@ export default function ImageEditorTool({
           </span>
         </div>
 
+        <div className="mt-2 flex items-center justify-between gap-3">
+          <span className="text-xs text-[var(--text-muted)]">
+            Resize mode
+          </span>
+
+          <span className="text-xs font-medium capitalize text-[var(--text)]">
+            {resize.mode}
+          </span>
+        </div>
+
         <p className="mt-2 text-[10px] leading-4 text-[var(--text-muted)]">
-          The image keeps its original proportions. A different output
-          ratio creates extra canvas space rather than stretching the
-          image.
+          {resize.mode === "fit" &&
+            "The entire image remains visible without distortion."}
+
+          {resize.mode === "fill" &&
+            "The image fills the canvas while preserving its proportions. Overflow is cropped."}
+
+          {resize.mode === "stretch" &&
+            "The image fills the canvas completely. Width and height may be distorted."}
         </p>
       </div>
 
@@ -309,7 +341,8 @@ export default function ImageEditorTool({
         <InfoRow
           label="Format"
           value={
-            imageType.replace("image/", "").toUpperCase() || "—"
+            imageType.replace("image/", "").toUpperCase() ||
+            "—"
           }
         />
       </div>

@@ -484,20 +484,29 @@ export default function EditPage() {
      RESIZE
   ======================================================= */
 
-  const updateResize = useCallback(
-    (updates: Partial<ResizeSettings>) => {
-      saveHistory();
+  const updateResize = useCallback((updates: Partial<ResizeSettings>) => {
+    setEditor((current) => {
+      const nextResize = {
+        ...current.resize,
+        ...updates,
+      };
 
-      setEditor((current) => ({
+      const changed =
+        nextResize.width !== current.resize.width ||
+        nextResize.height !== current.resize.height ||
+        nextResize.lockAspectRatio !== current.resize.lockAspectRatio ||
+        nextResize.mode !== current.resize.mode;
+
+      if (!changed) {
+        return current;
+      }
+
+      return {
         ...current,
-        resize: {
-          ...current.resize,
-          ...updates,
-        },
-      }));
-    },
-    [saveHistory],
-  );
+        resize: nextResize,
+      };
+    });
+  }, []);
 
   /* =======================================================
      ROTATE / FLIP
@@ -632,16 +641,6 @@ export default function EditPage() {
 
       const cropHeight = clamp(Math.round(crop.height), 1, imageHeight - cropY);
 
-      /*
-       * The resize dimensions represent the FINAL OUTPUT CANVAS.
-       *
-       * Example:
-       * source: 800 × 800
-       * target: 1200 × 600
-       *
-       * We create a 1200 × 600 canvas and fit the cropped image
-       * inside it without stretching.
-       */
       const outputWidth = Math.max(1, Math.round(editor.resize.width));
 
       const outputHeight = Math.max(1, Math.round(editor.resize.height));
@@ -660,13 +659,14 @@ export default function EditPage() {
       context.clearRect(0, 0, outputWidth, outputHeight);
 
       /*
-       * -------------------------------------------------------
+       * =======================================================
        * BACKGROUND
-       * -------------------------------------------------------
+       * =======================================================
        */
 
       if (editor.background.type === "solid") {
         context.fillStyle = editor.background.color;
+
         context.fillRect(0, 0, outputWidth, outputHeight);
       }
 
@@ -681,8 +681,11 @@ export default function EditPage() {
           2;
 
         const x1 = centerX - Math.cos(angle) * length;
+
         const y1 = centerY - Math.sin(angle) * length;
+
         const x2 = centerX + Math.cos(angle) * length;
+
         const y2 = centerY + Math.sin(angle) * length;
 
         const gradient = context.createLinearGradient(x1, y1, x2, y2);
@@ -697,85 +700,88 @@ export default function EditPage() {
       }
 
       /*
-       * Transparent background needs no fill.
+       * =======================================================
+       * PADDING
+       * =======================================================
        */
 
-      /*
-       * -------------------------------------------------------
-       * CROP SOURCE
-       * -------------------------------------------------------
-       */
+      const paddingLeft = Math.max(0, Math.round(editor.padding.left));
 
-      const croppedCanvas = document.createElement("canvas");
+      const paddingRight = Math.max(0, Math.round(editor.padding.right));
 
-      croppedCanvas.width = cropWidth;
-      croppedCanvas.height = cropHeight;
+      const paddingTop = Math.max(0, Math.round(editor.padding.top));
 
-      const croppedContext = croppedCanvas.getContext("2d");
-
-      if (!croppedContext) {
-        return;
-      }
-
-      croppedContext.clearRect(0, 0, cropWidth, cropHeight);
-
-      croppedContext.drawImage(
-        source,
-        cropX,
-        cropY,
-        cropWidth,
-        cropHeight,
-        0,
-        0,
-        cropWidth,
-        cropHeight,
-      );
-
-      /*
-       * -------------------------------------------------------
-       * AVAILABLE AREA AFTER PADDING
-       * -------------------------------------------------------
-       */
+      const paddingBottom = Math.max(0, Math.round(editor.padding.bottom));
 
       const availableWidth = Math.max(
         1,
-        outputWidth - editor.padding.left - editor.padding.right,
+        outputWidth - paddingLeft - paddingRight,
       );
 
       const availableHeight = Math.max(
         1,
-        outputHeight - editor.padding.top - editor.padding.bottom,
+        outputHeight - paddingTop - paddingBottom,
       );
 
       /*
-       * FIT IMAGE INTO OUTPUT FRAME.
-       *
-       * This is the important anti-distortion behavior.
-       *
-       * The source keeps its aspect ratio.
+       * =======================================================
+       * RESIZE MODE
+       * =======================================================
        */
-      const scale = Math.min(
-        availableWidth / cropWidth,
-        availableHeight / cropHeight,
-      );
 
-      const drawWidth = Math.max(1, Math.round(cropWidth * scale));
+      let drawWidth: number;
+      let drawHeight: number;
 
-      const drawHeight = Math.max(1, Math.round(cropHeight * scale));
+      if (editor.resize.mode === "stretch") {
+        drawWidth = availableWidth;
+        drawHeight = availableHeight;
+      } else {
+        const scale =
+          editor.resize.mode === "fill"
+            ? Math.max(availableWidth / cropWidth, availableHeight / cropHeight)
+            : Math.min(
+                availableWidth / cropWidth,
+                availableHeight / cropHeight,
+              );
 
-      const centerX = editor.padding.left + (availableWidth - drawWidth) / 2;
-
-      const centerY = editor.padding.top + (availableHeight - drawHeight) / 2;
+        drawWidth = cropWidth * scale;
+        drawHeight = cropHeight * scale;
+      }
 
       /*
-       * -------------------------------------------------------
-       * IMAGE TRANSFORM
-       * -------------------------------------------------------
+       * =======================================================
+       * IMAGE POSITION
+       * =======================================================
+       */
+
+      const centerX =
+        paddingLeft + (availableWidth - drawWidth) / 2 + drawWidth / 2;
+
+      const centerY =
+        paddingTop + (availableHeight - drawHeight) / 2 + drawHeight / 2;
+
+      /*
+       * =======================================================
+       * DRAW IMAGE
+       * =======================================================
        */
 
       context.save();
 
-      context.translate(centerX + drawWidth / 2, centerY + drawHeight / 2);
+      /*
+       * Everything is clipped to the output canvas.
+       *
+       * This is especially important for Fill mode because
+       * Fill intentionally creates an image larger than the
+       * available output area.
+       */
+      context.beginPath();
+
+      context.rect(0, 0, outputWidth, outputHeight);
+
+      context.clip();
+
+      context.translate(centerX, centerY);
 
       context.rotate((editor.rotateFlip.rotation * Math.PI) / 180);
 
@@ -785,63 +791,62 @@ export default function EditPage() {
       );
 
       /*
-       * Rounded corners are applied to the image itself.
-       *
-       * We use the smaller output dimension as the reference
-       * so the result behaves consistently at different sizes.
+       * =======================================================
+       * ROUNDED CORNERS
+       * =======================================================
        */
-      if (editor.roundedCorners.radius > 0) {
-        const radiusPercent = clamp(editor.roundedCorners.radius, 0, 100);
 
+      const radiusPercent = clamp(editor.roundedCorners.radius, 0, 100);
+
+      if (radiusPercent > 0) {
         const radius = Math.min(drawWidth, drawHeight) * (radiusPercent / 100);
+
+        const left = -drawWidth / 2;
+        const top = -drawHeight / 2;
+        const right = drawWidth / 2;
+        const bottom = drawHeight / 2;
 
         context.beginPath();
 
-        context.moveTo(-drawWidth / 2 + radius, -drawHeight / 2);
+        context.moveTo(left + radius, top);
 
-        context.lineTo(drawWidth / 2 - radius, -drawHeight / 2);
+        context.lineTo(right - radius, top);
 
-        context.quadraticCurveTo(
-          drawWidth / 2,
-          -drawHeight / 2,
-          drawWidth / 2,
-          -drawHeight / 2 + radius,
-        );
+        context.quadraticCurveTo(right, top, right, top + radius);
 
-        context.lineTo(drawWidth / 2, drawHeight / 2 - radius);
+        context.lineTo(right, bottom - radius);
 
-        context.quadraticCurveTo(
-          drawWidth / 2,
-          drawHeight / 2,
-          drawWidth / 2 - radius,
-          drawHeight / 2,
-        );
+        context.quadraticCurveTo(right, bottom, right - radius, bottom);
 
-        context.lineTo(-drawWidth / 2 + radius, drawHeight / 2);
+        context.lineTo(left + radius, bottom);
 
-        context.quadraticCurveTo(
-          -drawWidth / 2,
-          drawHeight / 2,
-          -drawWidth / 2,
-          drawHeight / 2 - radius,
-        );
+        context.quadraticCurveTo(left, bottom, left, bottom - radius);
 
-        context.lineTo(-drawWidth / 2, -drawHeight / 2 + radius);
+        context.lineTo(left, top + radius);
 
-        context.quadraticCurveTo(
-          -drawWidth / 2,
-          -drawHeight / 2,
-          -drawWidth / 2 + radius,
-          -drawHeight / 2,
-        );
+        context.quadraticCurveTo(left, top, left + radius, top);
 
         context.closePath();
 
         context.clip();
       }
 
+      /*
+       * =======================================================
+       * IMAGE DRAW
+       * =======================================================
+       */
+
+      context.imageSmoothingEnabled = true;
+
+      context.imageSmoothingQuality = "high";
+
       context.drawImage(
-        croppedCanvas,
+        source,
+        cropX,
+        cropY,
+        cropWidth,
+        cropHeight,
         -drawWidth / 2,
         -drawHeight / 2,
         drawWidth,
@@ -851,9 +856,9 @@ export default function EditPage() {
       context.restore();
 
       /*
-       * -------------------------------------------------------
-       * EXPORT
-       * -------------------------------------------------------
+       * =======================================================
+       * OUTPUT FORMAT
+       * =======================================================
        */
 
       const outputType =
@@ -866,9 +871,11 @@ export default function EditPage() {
       /*
        * JPEG cannot contain transparency.
        *
-       * If the user selected a transparent background while
-       * exporting JPEG, we use white as the fallback.
+       * Flatten transparent exports against white.
        */
+
+      let exportCanvas = canvas;
+
       if (
         outputType === "image/jpeg" &&
         editor.background.type === "transparent"
@@ -876,6 +883,7 @@ export default function EditPage() {
         const flattenedCanvas = document.createElement("canvas");
 
         flattenedCanvas.width = outputWidth;
+
         flattenedCanvas.height = outputHeight;
 
         const flattenedContext = flattenedCanvas.getContext("2d");
@@ -890,42 +898,28 @@ export default function EditPage() {
 
         flattenedContext.drawImage(canvas, 0, 0);
 
-        const jpegBlob = await new Promise<Blob | null>((resolve) => {
-          flattenedCanvas.toBlob(resolve, outputType, 0.95);
-        });
-
-        if (!jpegBlob) {
-          return;
-        }
-
-        const url = URL.createObjectURL(jpegBlob);
-
-        const link = document.createElement("a");
-
-        link.href = url;
-
-        const baseName = imageName.replace(/\.[^/.]+$/, "");
-
-        link.download = `${baseName}-${outputWidth}x${outputHeight}.jpg`;
-
-        document.body.appendChild(link);
-
-        link.click();
-
-        link.remove();
-
-        URL.revokeObjectURL(url);
-
-        return;
+        exportCanvas = flattenedCanvas;
       }
 
+      /*
+       * =======================================================
+       * BLOB
+       * =======================================================
+       */
+
       const blob = await new Promise<Blob | null>((resolve) => {
-        canvas.toBlob(resolve, outputType, 0.95);
+        exportCanvas.toBlob(resolve, outputType, 0.95);
       });
 
       if (!blob) {
         return;
       }
+
+      /*
+       * =======================================================
+       * DOWNLOAD
+       * =======================================================
+       */
 
       const url = URL.createObjectURL(blob);
 
@@ -955,6 +949,8 @@ export default function EditPage() {
       console.error("Failed to export edited image:", error);
     }
   }, [imageUrl, imageWidth, imageHeight, imageType, imageName, editor]);
+
+  
   /* =======================================================
      ZOOM
   ======================================================= */
