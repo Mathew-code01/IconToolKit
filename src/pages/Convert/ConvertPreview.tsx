@@ -57,8 +57,7 @@ export default function ConvertPreview({
   const isSvg =
     item.sourceFormat === "svg";
 
-  const generatedPreview =
-    item.preview.previewUrl;
+  const generatedPreview = item.preview?.previewUrl ?? null;
 
   const sourcePreview =
     item.previewUrl;
@@ -78,31 +77,25 @@ export default function ConvertPreview({
           </div>
 
           <div className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-            {item.preview.status ===
-            "generating"
+            {item.preview?.status === "generating"
               ? "Generating"
-              : item.preview.status ===
-                "ready"
+              : item.preview.status === "ready"
                 ? "Ready"
-                : item.preview.status ===
-                  "error"
+                : item.preview.status === "error"
                   ? "Error"
                   : "Idle"}
           </div>
         </div>
       </div>
 
-      {item.preview.error ? (
+      {item.preview?.error ? (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[10px] leading-5 text-red-600 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400">
-          {item.preview.error}
+          {item.preview?.error}
         </div>
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <PreviewPanel
-          title="Source"
-          subtitle={item.file.name}
-        >
+        <PreviewPanel title="Source" subtitle={item.file.name}>
           <div
             className={[
               "overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface-muted)]",
@@ -111,16 +104,13 @@ export default function ConvertPreview({
                 : "flex min-h-[280px] items-center justify-center p-4",
             ].join(" ")}
           >
-            {sourcePreview &&
-            isPdf ? (
+            {sourcePreview && isPdf ? (
               <iframe
                 src={sourcePreview}
                 title={`Source preview of ${item.file.name}`}
                 className="h-[360px] w-full border-0 bg-white"
               />
-            ) : sourcePreview &&
-              (isImage ||
-                isSvg) ? (
+            ) : sourcePreview && (isImage || isSvg) ? (
               <img
                 src={sourcePreview}
                 alt={`Preview of ${item.file.name}`}
@@ -143,8 +133,7 @@ export default function ConvertPreview({
                 alt={`Generated ${item.settings.outputFormat} preview`}
                 className="max-h-[360px] max-w-full object-contain"
               />
-            ) : item.preview.status ===
-              "generating" ? (
+            ) : item.preview?.status === "generating" ? (
               <div className="text-center">
                 <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--brand)]" />
 
@@ -168,10 +157,7 @@ export default function ConvertPreview({
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <InfoCard
-          label="Original"
-          value={item.sourceLabel}
-        />
+        <InfoCard label="Original" value={item.sourceLabel} />
 
         <InfoCard
           label="Output"
@@ -181,11 +167,9 @@ export default function ConvertPreview({
         <InfoCard
           label="Dimensions"
           value={
-            item.preview.outputWidth &&
-            item.preview.outputHeight
+            item.preview?.outputWidth && item.preview?.outputHeight
               ? `${item.preview.outputWidth} × ${item.preview.outputHeight}`
-              : item.width &&
-                  item.height
+              : item.width && item.height
                 ? `${item.width} × ${item.height}`
                 : isPdf
                   ? "PDF"
@@ -195,9 +179,7 @@ export default function ConvertPreview({
 
         <InfoCard
           label="Estimated size"
-          value={formatBytes(
-            item.preview.outputSize,
-          )}
+          value={formatBytes(item.preview?.outputSize ?? null)}
         />
       </div>
     </section>
