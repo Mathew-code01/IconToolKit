@@ -1,14 +1,19 @@
 // src/pages/Convert/ConvertPage.tsx
 // src/pages/Convert/ConvertPage.tsx
 
+// src/pages/Convert/ConvertPage.tsx
+
 import {
   useCallback,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
 import type {
   ConvertFile,
+  ConvertFormat,
   ConvertHistoryItem,
   ConvertSettingsState,
 } from "./ConvertTypes";
@@ -32,9 +37,10 @@ import { addConversionHistory } from "./convertHistoryStore";
 import {
   convertFile,
   getFileDimensions,
+  previewConversion,
 } from "./convertEngine";
 
-function createId() {
+function createId(): string {
   if (
     typeof crypto !== "undefined" &&
     "randomUUID" in crypto
@@ -81,12 +87,49 @@ const DEFAULT_SETTINGS: ConvertSettingsState = {
   pdfOrientation: "portrait",
 };
 
-function createPreviewUrl(file: File) {
-  const fileName = file.name.toLowerCase();
+function createDefaultSettings(
+  sourceFormat?: ConvertFormat,
+): ConvertSettingsState {
+  let outputFormat: ConvertFormat;
 
-  const isImage = file.type.startsWith("image/");
-  const isSvg = fileName.endsWith(".svg");
-  const isPdf = file.type === "application/pdf" || fileName.endsWith(".pdf");
+  switch (sourceFormat) {
+    case "webp":
+    case "svg":
+    case "ico":
+    case "pdf":
+      outputFormat = "png";
+      break;
+
+    case "png":
+    case "jpg":
+    case "bmp":
+    case "gif":
+    case "tiff":
+    default:
+      outputFormat = "webp";
+      break;
+  }
+
+  return {
+    ...DEFAULT_SETTINGS,
+    outputFormat,
+    icoSizes: [...DEFAULT_SETTINGS.icoSizes],
+  };
+}
+
+function createPreviewUrl(file: File): string | null {
+  const fileName =
+    file.name.toLowerCase();
+
+  const isImage =
+    file.type.startsWith("image/");
+
+  const isSvg =
+    fileName.endsWith(".svg");
+
+  const isPdf =
+    file.type === "application/pdf" ||
+    fileName.endsWith(".pdf");
 
   if (isImage || isSvg || isPdf) {
     return URL.createObjectURL(file);
@@ -95,22 +138,29 @@ function createPreviewUrl(file: File) {
   return null;
 }
 
-function revokePreview(item: ConvertFile) {
-  if (item.previewUrl) {
-    URL.revokeObjectURL(item.previewUrl);
+function revokeUrl(url: string | null | undefined): void {
+  if (!url) {
+    return;
   }
 
-  if (item.result?.downloadUrl) {
-    URL.revokeObjectURL(
-      item.result.downloadUrl,
-    );
+  try {
+    URL.revokeObjectURL(url);
+  } catch {
+    // Ignore already-revoked URLs.
   }
 }
 
+function revokePreview(item: ConvertFile): void {
+  revokeUrl(item.previewUrl);
+
+  revokeUrl(item.result?.downloadUrl);
+
+  revokeUrl(item.preview.previewUrl);
+}
+
 export default function ConvertPage() {
-  const [files, setFiles] = useState<
-    ConvertFile[]
-  >([]);
+  const [files, setFiles] =
+    useState<ConvertFile[]>([]);
 
   const [settings, setSettings] =
     useState<ConvertSettingsState>(
@@ -124,7 +174,9 @@ export default function ConvertPage() {
     conversionController,
     setConversionController,
   ] =
-    useState<AbortController | null>(null);
+    useState<AbortController | null>(
+      null,
+    );
 
   const [
     overallProgress,
@@ -141,6 +193,38 @@ export default function ConvertPage() {
     setErrorMessage,
   ] = useState<string | null>(null);
 
+  /*
+   * Preview generation has its own AbortControllers.
+   *
+   * This MUST be inside the component because
+   * useRef is a React hook.
+   */
+  const previewControllers = useRef(
+    new Map<string, AbortController>(),
+  );
+
+  /*
+   * Prevents an old async preview from updating
+   * the component after the component unmounts.
+   */
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+
+    return () => {
+      mountedRef.current = false;
+
+      previewControllers.current.forEach(
+        (controller) => {
+          controller.abort();
+        },
+      );
+
+      previewControllers.current.clear();
+    };
+  }, []);
+
   const updateSettings = useCallback(
     (
       patch: Partial<ConvertSettingsState>,
@@ -149,18 +233,122 @@ export default function ConvertPage() {
         ...current,
         ...patch,
       }));
+
+      /*
+       * Keep the per-file settings synchronized
+       * with the active workspace settings.
+       */
+      setFiles((current) =>
+        current.map((item) => {
+          const nextSettings = {
+            ...item.settings,
+            ...patch,
+          };
+
+          /*
+           * Any settings change invalidates the
+           * existing generated preview.
+           */
+          revokeUrl(
+            item.preview.previewUrl,
+          );
+
+          return {
+            ...item,
+
+            settings: nextSettings,
+
+            preview: {
+              ...item.preview,
+
+              outputFormat:
+                nextSettings.outputFormat,
+
+              outputWidth:
+                nextSettings.resizeEnabled
+                  ? (
+                      nextSettings.width ??
+                      item.width
+                    )
+                  : item.width,
+
+              outputHeight:
+                nextSettings.resizeEnabled
+                  ? (
+                      nextSettings.height ??
+                      item.height
+                    )
+                  : item.height,
+
+              outputSize: null,
+
+              previewUrl: null,
+
+              sizeEstimated: false,
+
+              status: "idle",
+
+              error: null,
+            },
+          };
+        }),
+      );
     },
     [],
   );
 
-  const resetSettings = useCallback(() => {
-    setSettings({
-      ...DEFAULT_SETTINGS,
-      icoSizes: [
-        ...DEFAULT_SETTINGS.icoSizes,
-      ],
-    });
-  }, []);
+  const resetSettings =
+    useCallback(() => {
+      const nextSettings: ConvertSettingsState =
+        {
+          ...DEFAULT_SETTINGS,
+          icoSizes: [
+            ...DEFAULT_SETTINGS.icoSizes,
+          ],
+        };
+
+      setSettings(nextSettings);
+
+      setFiles((current) =>
+        current.map((item) => {
+          revokeUrl(
+            item.preview.previewUrl,
+          );
+
+          const fileSettings =
+            createDefaultSettings(
+              item.sourceFormat,
+            );
+
+          return {
+            ...item,
+
+            settings: fileSettings,
+
+            preview: {
+              ...item.preview,
+
+              outputFormat:
+                fileSettings.outputFormat,
+
+              outputWidth: item.width,
+
+              outputHeight: item.height,
+
+              outputSize: null,
+
+              previewUrl: null,
+
+              sizeEstimated: false,
+
+              status: "idle",
+
+              error: null,
+            },
+          };
+        }),
+      );
+    }, []);
 
   const addFiles = useCallback(
     async (incoming: File[]) => {
@@ -176,24 +364,139 @@ export default function ConvertPage() {
           continue;
         }
 
-        const dimensions =
-          await getFileDimensions(file);
+        try {
+          const dimensions =
+            await getFileDimensions(file);
 
-        next.push({
-          id: createId(),
-          file,
-          sourceFormat,
-          sourceLabel:
-            FORMAT_LABELS[sourceFormat],
-          previewUrl:
-            createPreviewUrl(file),
-          width: dimensions.width,
-          height: dimensions.height,
-          status: "queued",
-          progress: 0,
-          error: null,
-          result: null,
-        });
+          const fileSettings =
+            createDefaultSettings(
+              sourceFormat,
+            );
+
+          next.push({
+            id: createId(),
+
+            file,
+
+            sourceFormat,
+
+            sourceLabel:
+              FORMAT_LABELS[sourceFormat],
+
+            previewUrl:
+              createPreviewUrl(file),
+
+            width: dimensions.width,
+
+            height: dimensions.height,
+
+            status: "queued",
+
+            progress: 0,
+
+            error: null,
+
+            result: null,
+
+            settings: fileSettings,
+
+            preview: {
+              sourceSize: file.size,
+
+              sourceWidth:
+                dimensions.width,
+
+              sourceHeight:
+                dimensions.height,
+
+              outputSize: null,
+
+              outputWidth:
+                dimensions.width,
+
+              outputHeight:
+                dimensions.height,
+
+              sourceFormat,
+
+              outputFormat:
+                fileSettings.outputFormat,
+
+              sizeEstimated: false,
+
+              previewUrl: null,
+
+              status: "idle",
+
+              error: null,
+            },
+          });
+        } catch {
+          /*
+           * Dimension detection is intentionally
+           * non-fatal. The engine can still attempt
+           * the conversion later.
+           */
+          const fileSettings =
+            createDefaultSettings(
+              sourceFormat,
+            );
+
+          next.push({
+            id: createId(),
+
+            file,
+
+            sourceFormat,
+
+            sourceLabel:
+              FORMAT_LABELS[sourceFormat],
+
+            previewUrl:
+              createPreviewUrl(file),
+
+            width: null,
+
+            height: null,
+
+            status: "queued",
+
+            progress: 0,
+
+            error: null,
+
+            result: null,
+
+            settings: fileSettings,
+
+            preview: {
+              sourceSize: file.size,
+
+              sourceWidth: null,
+
+              sourceHeight: null,
+
+              outputSize: null,
+
+              outputWidth: null,
+
+              outputHeight: null,
+
+              sourceFormat,
+
+              outputFormat:
+                fileSettings.outputFormat,
+
+              sizeEstimated: false,
+
+              previewUrl: null,
+
+              status: "idle",
+
+              error: null,
+            },
+          });
+        }
       }
 
       if (!next.length) {
@@ -210,71 +513,77 @@ export default function ConvertPage() {
       ]);
 
       /*
-       * Set a sensible output format when
-       * the first file is added.
+       * Select a sensible output format when
+       * the first file enters the workspace.
        */
-      if (files.length === 0) {
-        const firstFormat =
-          next[0]?.sourceFormat;
+      setFiles((current) => {
+        /*
+         * This callback runs after the previous
+         * queued files have been appended.
+         *
+         * The global settings are adjusted
+         * separately below, so this state update
+         * only returns the current collection.
+         */
+        return current;
+      });
 
-        if (
-          firstFormat === "png" ||
-          firstFormat === "jpg"
-        ) {
-          setSettings((current) => ({
-            ...current,
-            outputFormat:
-              firstFormat === "png"
-                ? "webp"
-                : "png",
-          }));
-        }
-
-        if (firstFormat === "webp") {
-          setSettings((current) => ({
-            ...current,
-            outputFormat: "png",
-          }));
-        }
-
-        if (firstFormat === "svg") {
-          setSettings((current) => ({
-            ...current,
-            outputFormat: "png",
-          }));
-        }
-
-        if (firstFormat === "ico") {
-          setSettings((current) => ({
-            ...current,
-            outputFormat: "png",
-          }));
-        }
-
-        if (firstFormat === "pdf") {
-          setSettings((current) => ({
-            ...current,
-            outputFormat: "png",
-          }));
-        }
-      }
+      /*
+       * We use the state that existed before this
+       * add operation to determine whether this
+       * was the first file.
+       */
+      setSettings((current) => {
+        /*
+         * If files already existed, preserve the
+         * user's current settings.
+         *
+         * The actual first-file detection is handled
+         * by the queued files effect below.
+         */
+        return current;
+      });
     },
-    [files.length],
+    [],
   );
+
+  /*
+   * When the first file is added, choose a sensible
+   * output format.
+   */
+  
+  /*
+   * Keep every queued item's settings synchronized
+   * with the global workspace settings.
+   *
+   * This is useful because the conversion engine receives
+   * the global settings, while ConvertFile also stores its
+   * own settings for previews/results.
+   */
 
   const removeFile = useCallback(
     (id: string) => {
       setFiles((current) => {
         const item = current.find(
-          (entry) => entry.id === id,
+          (entry) =>
+            entry.id === id,
         );
 
         if (item) {
+          previewControllers.current
+            .get(item.id)
+            ?.abort();
+
+          previewControllers.current.delete(
+            item.id,
+          );
+
           revokePreview(item);
         }
 
         return current.filter(
-          (entry) => entry.id !== id,
+          (entry) =>
+            entry.id !== id,
         );
       });
     },
@@ -282,11 +591,22 @@ export default function ConvertPage() {
   );
 
   const clearQueue = useCallback(() => {
+    previewControllers.current.forEach(
+      (controller) => {
+        controller.abort();
+      },
+    );
+
+    previewControllers.current.clear();
+
     files.forEach(revokePreview);
 
     setFiles([]);
+
     setErrorMessage(null);
+
     setOverallProgress(0);
+
     setCompletedCount(0);
   }, [files]);
 
@@ -298,7 +618,8 @@ export default function ConvertPage() {
       setFiles((current) => {
         const index =
           current.findIndex(
-            (item) => item.id === id,
+            (item) =>
+              item.id === id,
           );
 
         if (index < 0) {
@@ -317,7 +638,9 @@ export default function ConvertPage() {
           return current;
         }
 
-        const copy = [...current];
+        const copy = [
+          ...current,
+        ];
 
         [
           copy[index],
@@ -332,6 +655,211 @@ export default function ConvertPage() {
     },
     [],
   );
+
+  const generatePreview =
+    useCallback(
+      async (
+        item: ConvertFile,
+        previewSettings: ConvertSettingsState,
+      ) => {
+        const previous =
+          previewControllers.current.get(
+            item.id,
+          );
+
+        previous?.abort();
+
+        const controller =
+          new AbortController();
+
+        previewControllers.current.set(
+          item.id,
+          controller,
+        );
+
+        setFiles((current) =>
+          current.map((entry) =>
+            entry.id === item.id
+              ? {
+                  ...entry,
+
+                  preview: {
+                    ...entry.preview,
+
+                    status:
+                      "generating",
+
+                    error: null,
+                  },
+                }
+              : entry,
+          ),
+        );
+
+        try {
+          const result =
+            await previewConversion(
+              item,
+              previewSettings,
+              {
+                signal:
+                  controller.signal,
+              },
+            );
+
+          if (
+            controller.signal
+              .aborted ||
+            !mountedRef.current
+          ) {
+            revokeUrl(
+              result.previewUrl,
+            );
+
+            return;
+          }
+
+          /*
+           * Only replace the preview if this is
+           * still the current controller for the item.
+           */
+          const currentController =
+            previewControllers.current.get(
+              item.id,
+            );
+
+          if (
+            currentController !==
+            controller
+          ) {
+            revokeUrl(
+              result.previewUrl,
+            );
+
+            return;
+          }
+
+          setFiles((current) =>
+            current.map((entry) => {
+              if (
+                entry.id !== item.id
+              ) {
+                return entry;
+              }
+
+              revokeUrl(
+                entry.preview
+                  .previewUrl,
+              );
+
+              return {
+                ...entry,
+
+                preview: {
+                  ...entry.preview,
+
+                  outputSize:
+                    result.size,
+
+                  outputWidth:
+                    result.width,
+
+                  outputHeight:
+                    result.height,
+
+                  previewUrl:
+                    result.previewUrl,
+
+                  status: "ready",
+
+                  sizeEstimated: true,
+
+                  error: null,
+                },
+              };
+            }),
+          );
+        } catch (error) {
+          if (
+            controller.signal
+              .aborted ||
+            !mountedRef.current
+          ) {
+            return;
+          }
+
+          const message =
+            error instanceof Error
+              ? error.message
+              : "Preview generation failed.";
+
+          setFiles((current) =>
+            current.map((entry) =>
+              entry.id === item.id
+                ? {
+                    ...entry,
+
+                    preview: {
+                      ...entry.preview,
+
+                      status: "error",
+
+                      error: message,
+                    },
+                  }
+                : entry,
+            ),
+          );
+        } finally {
+          if (
+            previewControllers.current.get(
+              item.id,
+            ) === controller
+          ) {
+            previewControllers.current.delete(
+              item.id,
+            );
+          }
+        }
+      },
+      [],
+    );
+
+  /*
+   * Automatically generate a preview for the
+   * currently selected/first file whenever its
+   * settings change.
+   */
+  useEffect(() => {
+    const item = files[0];
+
+    if (!item) {
+      return;
+    }
+
+    if (converting) {
+      return;
+    }
+
+    const timer = window.setTimeout(
+      () => {
+        void generatePreview(
+          item,
+          settings,
+        );
+      },
+      150,
+    );
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [
+    files,
+    settings,
+    converting,
+    generatePreview,
+  ]);
 
   const convert = useCallback(
     async () => {
@@ -350,124 +878,46 @@ export default function ConvertPage() {
       );
 
       setConverting(true);
+
       setErrorMessage(null);
+
       setCompletedCount(0);
+
       setOverallProgress(0);
 
+      /*
+       * Abort any currently running previews.
+       */
+      previewControllers.current.forEach(
+        (previewController) => {
+          previewController.abort();
+        },
+      );
+
       setFiles((current) =>
-        current.map((item) => ({
-          ...item,
-          status: "queued",
-          progress: 0,
-          error: null,
-          result: null,
-        })),
+        current.map((item) => {
+          revokeUrl(
+            item.result?.downloadUrl,
+          );
+
+          return {
+            ...item,
+
+            status: "queued",
+
+            progress: 0,
+
+            error: null,
+
+            result: null,
+          };
+        }),
       );
 
       let completed = 0;
 
-      for (const item of files) {
-        if (
-          controller.signal.aborted
-        ) {
-          break;
-        }
-
-        setFiles((current) =>
-          current.map((entry) =>
-            entry.id === item.id
-              ? {
-                  ...entry,
-                  status:
-                    "processing",
-                  progress: 0,
-                }
-              : entry,
-          ),
-        );
-
-        try {
-          const result =
-            await convertFile(
-              item,
-              settings,
-              ({ progress }) => {
-                if (
-                  controller.signal
-                    .aborted
-                ) {
-                  return;
-                }
-
-                setFiles(
-                  (current) =>
-                    current.map(
-                      (entry) =>
-                        entry.id ===
-                        item.id
-                          ? {
-                              ...entry,
-                              progress,
-                            }
-                          : entry,
-                    ),
-                );
-
-                const overall =
-                  ((completed +
-                    progress / 100) /
-                    files.length) *
-                  100;
-
-                setOverallProgress(
-                  Math.round(
-                    overall,
-                  ),
-                );
-              },
-              {
-                signal:
-                  controller.signal,
-              },
-            );
-
-          setFiles((current) =>
-            current.map((entry) =>
-              entry.id === item.id
-                ? {
-                    ...entry,
-                    status: "success",
-                    progress: 100,
-                    result,
-                  }
-                : entry,
-            ),
-          );
-
-          const historyItem: ConvertHistoryItem =
-            {
-              id: createId(),
-              sourceName:
-                item.file.name,
-              outputName:
-                result.fileName,
-              sourceFormat:
-                item.sourceFormat,
-              outputFormat:
-                settings.outputFormat,
-              size: result.size,
-              createdAt: Date.now(),
-            };
-
-          addConversionHistory(
-            historyItem,
-          );
-        } catch (error) {
-          const message =
-            error instanceof Error
-              ? error.message
-              : "Conversion failed.";
-
+      try {
+        for (const item of files) {
           if (
             controller.signal
               .aborted
@@ -480,34 +930,189 @@ export default function ConvertPage() {
               entry.id === item.id
                 ? {
                     ...entry,
-                    status: "error",
+
+                    status:
+                      "processing",
+
                     progress: 0,
-                    error: message,
+
+                    error: null,
                   }
                 : entry,
             ),
           );
+
+          try {
+            const result =
+              await convertFile(
+                item,
+                settings,
+                ({
+                  progress,
+                }) => {
+                  if (
+                    controller.signal
+                      .aborted
+                  ) {
+                    return;
+                  }
+
+                  setFiles(
+                    (current) =>
+                      current.map(
+                        (entry) =>
+                          entry.id ===
+                          item.id
+                            ? {
+                                ...entry,
+
+                                progress:
+                                  Math.max(
+                                    0,
+                                    Math.min(
+                                      100,
+                                      progress,
+                                    ),
+                                  ),
+                              }
+                            : entry,
+                      ),
+                  );
+
+                  const overall =
+                    ((completed +
+                      progress /
+                        100) /
+                      files.length) *
+                    100;
+
+                  setOverallProgress(
+                    Math.round(
+                      Math.max(
+                        0,
+                        Math.min(
+                          100,
+                          overall,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                {
+                  signal:
+                    controller.signal,
+                },
+              );
+
+            if (
+              controller.signal
+                .aborted
+            ) {
+              revokeUrl(
+                result.downloadUrl,
+              );
+
+              break;
+            }
+
+            setFiles((current) =>
+              current.map(
+                (entry) =>
+                  entry.id ===
+                  item.id
+                    ? {
+                        ...entry,
+
+                        status:
+                          "success",
+
+                        progress: 100,
+
+                        result,
+                      }
+                    : entry,
+              ),
+            );
+
+            const historyItem: ConvertHistoryItem =
+              {
+                id: createId(),
+
+                sourceName:
+                  item.file.name,
+
+                outputName:
+                  result.fileName,
+
+                sourceFormat:
+                  item.sourceFormat,
+
+                outputFormat:
+                  settings.outputFormat,
+
+                size: result.size,
+
+                createdAt:
+                  Date.now(),
+              };
+
+            addConversionHistory(
+              historyItem,
+            );
+          } catch (error) {
+            if (
+              controller.signal
+                .aborted
+            ) {
+              break;
+            }
+
+            const message =
+              error instanceof Error
+                ? error.message
+                : "Conversion failed.";
+
+            setFiles((current) =>
+              current.map(
+                (entry) =>
+                  entry.id ===
+                  item.id
+                    ? {
+                        ...entry,
+
+                        status:
+                          "error",
+
+                        progress: 0,
+
+                        error: message,
+                      }
+                    : entry,
+              ),
+            );
+          }
+
+          completed += 1;
+
+          setCompletedCount(
+            completed,
+          );
+
+          setOverallProgress(
+            Math.round(
+              (completed /
+                files.length) *
+                100,
+            ),
+          );
         }
+      } finally {
+        setConverting(false);
 
-        completed += 1;
-
-        setCompletedCount(
-          completed,
-        );
-
-        setOverallProgress(
-          Math.round(
-            (completed /
-              files.length) *
-              100,
-          ),
+        setConversionController(
+          null,
         );
       }
-
-      setConverting(false);
-      setConversionController(
-        null,
-      );
     },
     [
       files,
@@ -516,93 +1121,159 @@ export default function ConvertPage() {
     ],
   );
 
-  const downloadFile = useCallback(
-    (item: ConvertFile) => {
-      if (!item.result) {
-        return;
-      }
+  const cancelConversion =
+    useCallback(() => {
+      conversionController?.abort();
+    }, [conversionController]);
 
-      const anchor =
-        document.createElement(
-          "a",
-        );
-
-      anchor.href =
-        item.result.downloadUrl;
-
-      anchor.download =
-        item.result.fileName;
-
-      document.body.appendChild(
-        anchor,
-      );
-
-      anchor.click();
-
-      anchor.remove();
-    },
-    [],
-  );
-
-  const downloadAll = useCallback(
-    async () => {
-      const successful =
-        files.filter(
-          (item) => item.result,
-        );
-
-      if (!successful.length) {
-        return;
-      }
-
-      const {
-        default: JSZip,
-      } = await import(
-        "jszip"
-      );
-
-      const zip = new JSZip();
-
-      successful.forEach((item) => {
+  const downloadFile =
+    useCallback(
+      (item: ConvertFile) => {
         if (!item.result) {
           return;
         }
 
-        zip.file(
-          item.result.fileName,
-          item.result.blob,
-        );
-      });
+        const anchor =
+          document.createElement(
+            "a",
+          );
 
-      const blob =
-        await zip.generateAsync({
-          type: "blob",
-        });
+        anchor.href =
+          item.result.downloadUrl;
 
-      const url =
-        URL.createObjectURL(blob);
+        anchor.download =
+          item.result.fileName;
 
-      const anchor =
-        document.createElement(
-          "a",
+        anchor.rel = "noopener";
+
+        document.body.appendChild(
+          anchor,
         );
 
-      anchor.href = url;
-      anchor.download =
-        "icon-toolkit-converted.zip";
+        anchor.click();
 
-      document.body.appendChild(
-        anchor,
+        anchor.remove();
+      },
+      [],
+    );
+
+  const downloadAll =
+    useCallback(
+      async () => {
+        const successful =
+          files.filter(
+            (item) =>
+              item.result,
+          );
+
+        if (
+          !successful.length
+        ) {
+          return;
+        }
+
+        try {
+          const {
+            default: JSZip,
+          } = await import(
+            "jszip"
+          );
+
+          const zip =
+            new JSZip();
+
+          successful.forEach(
+            (item) => {
+              if (!item.result) {
+                return;
+              }
+
+              zip.file(
+                item.result
+                  .fileName,
+                item.result.blob,
+              );
+            },
+          );
+
+          const blob =
+            await zip.generateAsync(
+              {
+                type: "blob",
+
+                compression:
+                  "DEFLATE",
+
+                compressionOptions: {
+                  level: 6,
+                },
+              },
+            );
+
+          const url =
+            URL.createObjectURL(
+              blob,
+            );
+
+          const anchor =
+            document.createElement(
+              "a",
+            );
+
+          anchor.href = url;
+
+          anchor.download =
+            "icon-toolkit-converted.zip";
+
+          anchor.rel = "noopener";
+
+          document.body.appendChild(
+            anchor,
+          );
+
+          anchor.click();
+
+          anchor.remove();
+
+          window.setTimeout(
+            () => {
+              revokeUrl(url);
+            },
+            1000,
+          );
+        } catch (error) {
+          const message =
+            error instanceof Error
+              ? error.message
+              : "Could not create the ZIP archive.";
+
+          setErrorMessage(message);
+        }
+      },
+      [files],
+    );
+
+  /*
+   * Clean everything when this page unmounts.
+   */
+  useEffect(() => {
+    return () => {
+      conversionController?.abort();
+
+      previewControllers.current.forEach(
+        (controller) => {
+          controller.abort();
+        },
       );
 
-      anchor.click();
-
-      anchor.remove();
-
-      URL.revokeObjectURL(url);
-    },
-    [files],
-  );
+      files.forEach(
+        revokePreview,
+      );
+    };
+  }, [
+    conversionController,
+    files,
+  ]);
 
   const successfulCount =
     useMemo(
@@ -744,8 +1415,8 @@ export default function ConvertPage() {
                 {converting ? (
                   <button
                     type="button"
-                    onClick={() =>
-                      conversionController?.abort()
+                    onClick={
+                      cancelConversion
                     }
                     className="mt-4 flex h-12 w-full items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] px-5 text-sm font-semibold text-[var(--text)] transition hover:bg-[var(--surface-subtle)]"
                   >
