@@ -68,6 +68,35 @@ export interface DecodedImage {
   animated?: boolean;
 }
 
+export interface ConversionPreviewResult {
+  blob: Blob;
+
+  width: number | null;
+  height: number | null;
+
+  size: number;
+
+  previewUrl: string | null;
+
+  fileName: string;
+}
+
+export async function previewConversion(
+  item: ConvertFile,
+  settings: ConvertSettingsState,
+  options?: ConversionOptions,
+): Promise<ConversionPreviewResult> {
+  const signal = options?.signal;
+
+  throwIfAborted(signal);
+
+  if (item.sourceFormat === "pdf") {
+    return previewPdfConversion(item, settings, signal);
+  }
+
+  return previewImageConversion(item, settings, signal);
+}
+
 const DEFAULT_ICO_SIZES = [
   16,
   24,
@@ -1275,92 +1304,79 @@ async function createMultiPagePdf(
   });
 }
 
+interface PdfImageConversionResult {
+  blob: Blob;
+  isArchive: boolean;
+}
+
 async function convertPdfToImages(
   file: File,
   settings: ConvertSettingsState,
   signal?: AbortSignal,
-  onProgress?: (
-    progress: ConversionProgress,
-  ) => void,
-): Promise<Blob> {
-  const pages =
-    await renderPdfPages(
-      file,
-      signal,
-      onProgress,
-    );
+  onProgress?: (progress: ConversionProgress) => void,
+): Promise<PdfImageConversionResult> {
+  const pages = await renderPdfPages(file, signal, onProgress);
 
   if (!pages.length) {
-    throw new Error(
-      "The PDF contains no renderable pages.",
-    );
+    throw new Error("The PDF contains no renderable pages.");
   }
 
-  const extension =
-    getExtension(
-      settings.outputFormat,
-    );
+  const extension = getExtension(settings.outputFormat);
 
-  const successful:
-    { name: string; blob: Blob }[] =
-    [];
+  const successful: {
+    name: string;
+    blob: Blob;
+  }[] = [];
 
-  for (
-    let index = 0;
-    index < pages.length;
-    index += 1
-  ) {
+  for (let index = 0; index < pages.length; index += 1) {
     throwIfAborted(signal);
 
-    const output =
-      await canvasToBlob(
-        pages[index],
-        settings.outputFormat,
-        settings.quality,
-      );
+    const output = await canvasToBlob(
+      pages[index],
+      settings.outputFormat,
+      settings.quality,
+    );
 
     successful.push({
-      name: `page-${String(
-        index + 1,
-      ).padStart(3, "0")}.${extension}`,
+      name: `page-${String(index + 1).padStart(3, "0")}.${extension}`,
+
       blob: output,
     });
 
     onProgress?.({
-      progress:
-        90 +
-        Math.round(
-          ((index + 1) /
-            pages.length) *
-            10,
-        ),
+      progress: 90 + Math.round(((index + 1) / pages.length) * 10),
+
       stage: `Encoding page ${index + 1} of ${pages.length}`,
     });
   }
 
   if (successful.length === 1) {
-    return successful[0].blob;
+    return {
+      blob: successful[0].blob,
+      isArchive: false,
+    };
   }
 
-  const zip =
-    new JSZip();
+  const zip = new JSZip();
 
-  successful.forEach(
-    (item) => {
-      zip.file(
-        item.name,
-        item.blob,
-      );
-    },
-  );
+  successful.forEach((item) => {
+    zip.file(item.name, item.blob);
+  });
 
-  return zip.generateAsync({
+  const archive = await zip.generateAsync({
     type: "blob",
+
     compression: "DEFLATE",
+
     compressionOptions: {
       level: 6,
     },
   });
+
+  return {
+    blob: archive,
+    isArchive: true,
+  };
 }
 
 async function convertImage(
@@ -1445,6 +1461,124 @@ async function convertImage(
   return blob;
 }
 
+async function previewImageConversion(
+  item: ConvertFile,
+  settings: ConvertSettingsState,
+  signal?: AbortSignal,
+): Promise<ConversionPreviewResult> {
+  throwIfAborted(signal);
+
+  const decoded = await decodeImage(item.file, signal);
+
+  throwIfAborted(signal);
+
+  /*
+   * ICO is special because the generated file is a
+   * multi-size container. For the visual preview,
+   * use the decoded source canvas.
+   */
+  if (settings.outputFormat === "ico") {
+    const blob = await createIco(decoded.canvas, settings.icoSizes, signal);
+
+    throwIfAborted(signal);
+
+    return {
+      blob,
+
+      width: decoded.canvas.width,
+
+      height: decoded.canvas.height,
+
+      size: blob.size,
+
+      previewUrl: URL.createObjectURL(
+        decoded.canvas ? await canvasToBlob(decoded.canvas, "png", 100) : blob,
+      ),
+
+      fileName: makeOutputName(item.file, settings.outputFormat, settings),
+    };
+  }
+
+  const previewCanvas = drawToCanvas(decoded.canvas, settings);
+
+  throwIfAborted(signal);
+
+  const blob = await canvasToBlob(
+    previewCanvas,
+    settings.outputFormat,
+    settings.quality,
+  );
+
+  throwIfAborted(signal);
+
+  return {
+    blob,
+
+    width: previewCanvas.width,
+
+    height: previewCanvas.height,
+
+    size: blob.size,
+
+    previewUrl: URL.createObjectURL(blob),
+
+    fileName: makeOutputName(item.file, settings.outputFormat, settings),
+  };
+}
+
+async function previewPdfConversion(
+  item: ConvertFile,
+  settings: ConvertSettingsState,
+  signal?: AbortSignal,
+): Promise<ConversionPreviewResult> {
+  throwIfAborted(signal);
+
+  if (settings.outputFormat === "pdf") {
+    return {
+      blob: item.file,
+
+      width: null,
+      height: null,
+
+      size: item.file.size,
+
+      previewUrl: item.previewUrl,
+
+      fileName: makeOutputName(item.file, settings.outputFormat, settings),
+    };
+  }
+
+  const pages = await renderPdfPages(item.file, signal);
+
+  if (!pages.length) {
+    throw new Error("The PDF contains no renderable pages.");
+  }
+
+  const firstPage = pages[0];
+
+  const previewCanvas = drawToCanvas(firstPage, settings);
+
+  const blob = await canvasToBlob(
+    previewCanvas,
+    settings.outputFormat,
+    settings.quality,
+  );
+
+  return {
+    blob,
+
+    width: previewCanvas.width,
+
+    height: previewCanvas.height,
+
+    size: blob.size,
+
+    previewUrl: URL.createObjectURL(blob),
+
+    fileName: makeOutputName(item.file, settings.outputFormat, settings),
+  };
+}
+
 export async function convertFile(
   item: ConvertFile,
   settings: ConvertSettingsState,
@@ -1468,74 +1602,56 @@ export async function convertFile(
     item.sourceFormat;
 
   let blob: Blob;
+let outputFileName: string | null = null;
 
   /*
    * PDF → image
    */
-  if (sourceFormat === "pdf") {
-    if (
-      settings.outputFormat ===
-      "pdf"
-    ) {
-      throw new Error(
-        "The source and output formats are both PDF.",
-      );
-    }
+ if (sourceFormat === "pdf") {
+   if (settings.outputFormat === "pdf") {
+     throw new Error("The source and output formats are both PDF.");
+   }
 
-    blob =
-      await convertPdfToImages(
-        item.file,
-        settings,
-        signal,
-        onProgress,
-      );
-  } else if (
-    settings.outputFormat ===
-    "pdf"
-  ) {
-    /*
-     * Image → multi-page PDF.
-     *
-     * A GIF animation becomes one page per
-     * decoded frame in a future animation-aware
-     * PDF workflow; the current conversion
-     * preserves the first frame.
-     */
-    const decoded =
-      await decodeImage(
-        item.file,
-        signal,
-      );
+   const pdfResult = await convertPdfToImages(
+     item.file,
+     settings,
+     signal,
+     onProgress,
+   );
 
-    blob =
-      await createMultiPagePdf(
-        [decoded.canvas],
-        settings,
-        signal,
-      );
+   blob = pdfResult.blob;
 
-    onProgress?.({
-      progress: 100,
-      stage: "PDF created",
-    });
-  } else {
-    blob =
-      await convertImage(
-        item.file,
-        settings,
-        signal,
-        onProgress,
-      );
-  }
+   if (pdfResult.isArchive) {
+     const original = item.file.name.replace(/\.[^/.]+$/, "");
+
+     outputFileName = `${original}${settings.suffix}.zip`;
+   }
+ } else if (settings.outputFormat === "pdf") {
+   /*
+    * Image → multi-page PDF.
+    *
+    * A GIF animation becomes one page per
+    * decoded frame in a future animation-aware
+    * PDF workflow; the current conversion
+    * preserves the first frame.
+    */
+   const decoded = await decodeImage(item.file, signal);
+
+   blob = await createMultiPagePdf([decoded.canvas], settings, signal);
+
+   onProgress?.({
+     progress: 100,
+     stage: "PDF created",
+   });
+ } else {
+   blob = await convertImage(item.file, settings, signal, onProgress);
+ }
 
   throwIfAborted(signal);
 
   const fileName =
-    makeOutputName(
-      item.file,
-      settings.outputFormat,
-      settings,
-    );
+    outputFileName ??
+    makeOutputName(item.file, settings.outputFormat, settings);
 
   return {
     blob,

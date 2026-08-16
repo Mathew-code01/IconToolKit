@@ -29,16 +29,29 @@ export interface ConversionTool {
 
 export interface ConvertFile {
   id: string;
+
   file: File;
-  sourceFormat: ConvertFormat | null;
+
+  sourceFormat: ConvertFormat;
+
   sourceLabel: string;
+
   previewUrl: string | null;
+
   width: number | null;
   height: number | null;
-  status: ConversionStatus;
+
+  status: "queued" | "processing" | "success" | "error";
+
   progress: number;
+
   error: string | null;
+
   result: ConversionResult | null;
+
+  settings: ConvertSettingsState;
+
+  preview: ConversionPreview;
 }
 
 export interface ConversionResult {
@@ -76,6 +89,29 @@ export interface ConvertSettingsState {
 
   pdfPageSize: "auto" | "a4" | "letter" | "square";
   pdfOrientation: "portrait" | "landscape";
+}
+
+export interface ConversionPreview {
+  sourceSize: number;
+
+  sourceWidth: number | null;
+  sourceHeight: number | null;
+
+  outputSize: number | null;
+
+  outputWidth: number | null;
+  outputHeight: number | null;
+
+  sourceFormat: ConvertFormat;
+  outputFormat: ConvertFormat;
+
+  sizeEstimated: boolean;
+
+  previewUrl: string | null;
+
+  status: "idle" | "generating" | "ready" | "error";
+
+  error: string | null;
 }
 
 export interface ConvertHistoryItem {
