@@ -8,6 +8,8 @@ import type {
   ConversionResult,
 } from "./ConvertTypes";
 
+import * as mammoth from "mammoth";
+
 import {
   getExtension,
   getMimeType,
@@ -41,10 +43,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url,
 ).toString();
 
-const PDF_WASM_URL = new URL(
-  "pdfjs-dist/wasm/",
-  import.meta.url,
-).toString();
+const PDF_WASM_URL = "/pdfjs/wasm/";
 
 export interface ConversionProgress {
   progress: number;
@@ -81,20 +80,110 @@ export interface ConversionPreviewResult {
   fileName: string;
 }
 
-export async function previewConversion(
-  item: ConvertFile,
-  settings: ConvertSettingsState,
-  options?: ConversionOptions,
-): Promise<ConversionPreviewResult> {
-  const signal = options?.signal;
+async function extractDocxText(
+  file: File,
+  signal?: AbortSignal,
+): Promise<string> {
+  throwIfAborted(signal);
+
+  const arrayBuffer = await file.arrayBuffer();
 
   throwIfAborted(signal);
 
-  if (item.sourceFormat === "pdf") {
-    return previewPdfConversion(item, settings, signal);
+  const result = await mammoth.extractRawText({
+    arrayBuffer,
+  });
+
+  throwIfAborted(signal);
+
+  return result.value;
+}
+
+async function previewWordConversion(
+  item: ConvertFile,
+  settings: ConvertSettingsState,
+  signal?: AbortSignal,
+): Promise<ConversionPreviewResult> {
+  throwIfAborted(signal);
+
+  if (item.sourceFormat === "doc") {
+    throw new Error(
+      "Legacy DOC files are not supported by the browser-only Word converter yet.",
+    );
   }
 
-  return previewImageConversion(item, settings, signal);
+  if (item.sourceFormat !== "docx") {
+    throw new Error("This Word preview requires a DOCX file.");
+  }
+
+  if (settings.outputFormat === "docx") {
+    return {
+      blob: item.file,
+      width: null,
+      height: null,
+      size: item.file.size,
+      previewUrl: null,
+      fileName: makeOutputName(item.file, settings.outputFormat, settings),
+    };
+  }
+
+  if (settings.outputFormat === "txt") {
+    const text = await extractDocxText(item.file, signal);
+
+    const blob = new Blob([text], {
+      type: "text/plain;charset=utf-8",
+    });
+
+    const previewBlob = new Blob([text], {
+      type: "text/plain;charset=utf-8",
+    });
+
+    return {
+      blob,
+      width: null,
+      height: null,
+      size: blob.size,
+      previewUrl: URL.createObjectURL(previewBlob),
+      fileName: makeOutputName(item.file, settings.outputFormat, settings),
+    };
+  }
+
+  const htmlResult = await mammoth.convertToHtml({
+    arrayBuffer: await item.file.arrayBuffer(),
+  });
+
+  throwIfAborted(signal);
+
+  const html = `
+    <article
+      style="
+        box-sizing:border-box;
+        width:794px;
+        min-height:1123px;
+        padding:64px;
+        background:white;
+        color:#111;
+        font-family:Arial, Helvetica, sans-serif;
+        font-size:14px;
+        line-height:1.55;
+      "
+    >
+      ${htmlResult.value}
+    </article>
+  `;
+
+  const blob = new Blob([html], {
+    type: "text/html;charset=utf-8",
+  });
+
+  return {
+    blob,
+    width: 794,
+    height: 1123,
+    size: blob.size,
+    previewUrl: URL.createObjectURL(blob),
+    fileName: makeOutputName(item.file, settings.outputFormat, settings),
+  };
 }
 
 const DEFAULT_ICO_SIZES = [
@@ -1304,6 +1393,47 @@ async function createMultiPagePdf(
   });
 }
 
+async function convertWord(
+  file: File,
+  settings: ConvertSettingsState,
+  signal?: AbortSignal,
+  onProgress?: (progress: ConversionProgress) => void,
+): Promise<Blob> {
+  throwIfAborted(signal);
+
+  if (getFileExtension(file) === "doc" || file.type === "application/msword") {
+    throw new Error(
+      "Legacy .doc conversion is not available in browser-only mode yet.",
+    );
+  }
+
+  if (settings.outputFormat === "docx") {
+    onProgress?.({
+      progress: 100,
+      stage: "DOCX ready",
+    });
+
+    return file;
+  }
+
+  if (settings.outputFormat === "txt") {
+    const text = await extractDocxText(file, signal);
+
+    onProgress?.({
+      progress: 100,
+      stage: "Text extracted",
+    });
+
+    return new Blob([text], {
+      type: "text/plain;charset=utf-8",
+    });
+  }
+
+  throw new Error(
+    `DOCX → ${settings.outputFormat.toUpperCase()} is not implemented in the browser converter yet.`,
+  );
+}
+
 interface PdfImageConversionResult {
   blob: Blob;
   isArchive: boolean;
@@ -1474,27 +1604,21 @@ async function previewImageConversion(
 
   /*
    * ICO is special because the generated file is a
-   * multi-size container. For the visual preview,
-   * use the decoded source canvas.
+   * multi-size container.
    */
   if (settings.outputFormat === "ico") {
     const blob = await createIco(decoded.canvas, settings.icoSizes, signal);
 
     throwIfAborted(signal);
 
+    const previewBlob = await canvasToBlob(decoded.canvas, "png", 100);
+
     return {
       blob,
-
       width: decoded.canvas.width,
-
       height: decoded.canvas.height,
-
       size: blob.size,
-
-      previewUrl: URL.createObjectURL(
-        decoded.canvas ? await canvasToBlob(decoded.canvas, "png", 100) : blob,
-      ),
-
+      previewUrl: URL.createObjectURL(previewBlob),
       fileName: makeOutputName(item.file, settings.outputFormat, settings),
     };
   }
@@ -1502,6 +1626,28 @@ async function previewImageConversion(
   const previewCanvas = drawToCanvas(decoded.canvas, settings);
 
   throwIfAborted(signal);
+
+  /*
+   * Canvas cannot encode PDF directly.
+   * Generate the actual PDF for the preview result,
+   * but use a PNG representation for the visual preview.
+   */
+  if (settings.outputFormat === "pdf") {
+    const blob = await createMultiPagePdf([previewCanvas], settings, signal);
+
+    throwIfAborted(signal);
+
+    const previewBlob = await canvasToBlob(previewCanvas, "png", 100);
+
+    return {
+      blob,
+      width: previewCanvas.width,
+      height: previewCanvas.height,
+      size: blob.size,
+      previewUrl: URL.createObjectURL(previewBlob),
+      fileName: makeOutputName(item.file, settings.outputFormat, settings),
+    };
+  }
 
   const blob = await canvasToBlob(
     previewCanvas,
@@ -1513,15 +1659,10 @@ async function previewImageConversion(
 
   return {
     blob,
-
     width: previewCanvas.width,
-
     height: previewCanvas.height,
-
     size: blob.size,
-
     previewUrl: URL.createObjectURL(blob),
-
     fileName: makeOutputName(item.file, settings.outputFormat, settings),
   };
 }
@@ -1579,6 +1720,38 @@ async function previewPdfConversion(
   };
 }
 
+export async function previewConversion(
+  item: ConvertFile,
+  settings: ConvertSettingsState,
+  signal?: AbortSignal,
+): Promise<ConversionPreviewResult> {
+  throwIfAborted(signal);
+
+  switch (item.sourceFormat) {
+    case "pdf":
+      return previewPdfConversion(
+        item,
+        settings,
+        signal,
+      );
+
+    case "doc":
+    case "docx":
+      return previewWordConversion(
+        item,
+        settings,
+        signal,
+      );
+
+    default:
+      return previewImageConversion(
+        item,
+        settings,
+        signal,
+      );
+  }
+}
+
 export async function convertFile(
   item: ConvertFile,
   settings: ConvertSettingsState,
@@ -1626,6 +1799,8 @@ let outputFileName: string | null = null;
 
      outputFileName = `${original}${settings.suffix}.zip`;
    }
+ } else if (sourceFormat === "docx" || sourceFormat === "doc") {
+   blob = await convertWord(item.file, settings, signal, onProgress);
  } else if (settings.outputFormat === "pdf") {
    /*
     * Image → multi-page PDF.
@@ -1737,6 +1912,75 @@ export async function getFileDimensions(
       width: null,
       height: null,
     };
+  }
+}
+
+export async function createSourcePreview(
+  file: File,
+  signal?: AbortSignal,
+): Promise<string | null> {
+  try {
+    throwIfAborted(signal);
+
+    const format = getFileExtension(file);
+
+    if (format === "pdf" || file.type === "application/pdf") {
+      const pages = await renderPdfPages(file, signal);
+
+      if (!pages.length) {
+        return null;
+      }
+
+      const firstPage = pages[0];
+
+      const thumbnail = document.createElement("canvas");
+
+      const maxSize = 180;
+
+      const scale = Math.min(
+        maxSize / firstPage.width,
+        maxSize / firstPage.height,
+        1,
+      );
+
+      thumbnail.width = Math.max(1, Math.round(firstPage.width * scale));
+
+      thumbnail.height = Math.max(1, Math.round(firstPage.height * scale));
+
+      const context = thumbnail.getContext("2d");
+
+      if (!context) {
+        return null;
+      }
+
+      context.drawImage(firstPage, 0, 0, thumbnail.width, thumbnail.height);
+
+      const blob = await new Promise<Blob | null>((resolve) => {
+        thumbnail.toBlob(resolve, "image/jpeg", 0.82);
+      });
+
+      if (!blob) {
+        return null;
+      }
+
+      return URL.createObjectURL(blob);
+    }
+
+    if (
+      format === "docx" ||
+      file.type ===
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ) {
+      return null;
+    }
+
+    const decoded = await decodeImage(file, signal);
+
+    const blob = await canvasToBlob(decoded.canvas, "jpg", 80);
+
+    return URL.createObjectURL(blob);
+  } catch {
+    return null;
   }
 }
 
