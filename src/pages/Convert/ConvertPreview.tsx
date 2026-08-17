@@ -1,20 +1,13 @@
 // src/pages/Convert/ConvertPreview.tsx
 
-// src/pages/Convert/ConvertPreview.tsx
-
 import type { ConvertFile } from "./ConvertTypes";
 
 interface ConvertPreviewProps {
   item?: ConvertFile;
 }
 
-function formatBytes(
-  bytes: number | null,
-): string {
-  if (
-    bytes === null ||
-    !Number.isFinite(bytes)
-  ) {
+function formatBytes(bytes: number | null): string {
+  if (bytes === null || !Number.isFinite(bytes)) {
     return "—";
   }
 
@@ -23,140 +16,156 @@ function formatBytes(
   }
 
   if (bytes < 1024 * 1024) {
-    return `${(
-      bytes / 1024
-    ).toFixed(1)} KB`;
+    return `${(bytes / 1024).toFixed(1)} KB`;
   }
 
-  return `${(
-    bytes /
-    (1024 * 1024)
-  ).toFixed(2)} MB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-export default function ConvertPreview({
-  item,
-}: ConvertPreviewProps) {
+function isImageFormat(format: string): boolean {
+  return [
+    "png",
+    "jpg",
+    "jpeg",
+    "webp",
+    "avif",
+    "bmp",
+    "gif",
+    "tiff",
+    "ico",
+    "svg",
+  ].includes(format);
+}
+
+function getCategory(format: string): string {
+  if (format === "pdf") return "PDF document";
+
+  if (format === "doc" || format === "docx" || format === "word") {
+    return "Word document";
+  }
+
+  if (isImageFormat(format)) {
+    return "Image";
+  }
+
+  return "File";
+}
+
+export default function ConvertPreview({ item }: ConvertPreviewProps) {
   if (!item) {
     return null;
   }
 
-  const isPdf =
-    item.sourceFormat === "pdf";
+  const sourceFormat = String(item.sourceFormat).toLowerCase();
 
-  const isImage =
-    item.sourceFormat === "png" ||
-    item.sourceFormat === "jpg" ||
-    item.sourceFormat === "webp" ||
-    item.sourceFormat === "avif" ||
-    item.sourceFormat === "bmp" ||
-    item.sourceFormat === "gif" ||
-    item.sourceFormat === "tiff" ||
-    item.sourceFormat === "ico";
+  const isPdf = sourceFormat === "pdf";
 
-  const isSvg =
-    item.sourceFormat === "svg";
+  const isImage = isImageFormat(sourceFormat);
+
+  const isWord =
+    sourceFormat === "doc" ||
+    sourceFormat === "docx" ||
+    sourceFormat === "word";
 
   const generatedPreview = item.preview?.previewUrl ?? null;
 
-  const sourcePreview =
-    item.previewUrl;
+  const sourcePreview = item.previewUrl ?? null;
+
+  const previewStatus = item.preview?.status ?? "idle";
 
   return (
-    <section className="rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface-subtle)] p-4 sm:p-5">
-      <div className="mb-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-sm font-semibold text-[var(--text)]">
-              Preview
-            </h3>
+    <section className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface-subtle)]">
+      <div className="border-b border-[var(--border)] px-4 py-4 sm:px-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-[var(--text)]">
+                Preview
+              </h3>
 
-            <p className="mt-1 text-[11px] text-[var(--text-muted)]">
-              Review the source and generated output before downloading.
+              <span className="rounded-full bg-[var(--surface-muted)] px-2 py-1 text-[9px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                {getCategory(sourceFormat)}
+              </span>
+            </div>
+
+            <p className="mt-1 truncate text-[11px] text-[var(--text-muted)]">
+              {item.file.name}
             </p>
           </div>
 
-          <div className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-            {item.preview?.status === "generating"
-              ? "Generating"
-              : item.preview.status === "ready"
-                ? "Ready"
-                : item.preview.status === "error"
-                  ? "Error"
-                  : "Idle"}
-          </div>
+          <StatusBadge status={previewStatus} />
         </div>
       </div>
 
       {item.preview?.error ? (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[10px] leading-5 text-red-600 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400">
-          {item.preview?.error}
+        <div className="mx-4 mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[10px] leading-5 text-red-600 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400">
+          {item.preview.error}
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <PreviewPanel title="Source" subtitle={item.file.name}>
-          <div
-            className={[
-              "overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface-muted)]",
-              isPdf
-                ? "min-h-[360px]"
-                : "flex min-h-[280px] items-center justify-center p-4",
-            ].join(" ")}
-          >
-            {sourcePreview && isPdf ? (
+      <div className="grid grid-cols-1 gap-px bg-[var(--border)] lg:grid-cols-2">
+        <PreviewPanel
+          title="Original"
+          subtitle={`${item.sourceLabel} · ${formatBytes(item.file.size)}`}
+        >
+          <div className="flex min-h-[300px] items-center justify-center overflow-hidden bg-[var(--surface-muted)] p-4">
+            {isPdf && sourcePreview ? (
               <iframe
                 src={sourcePreview}
-                title={`Source preview of ${item.file.name}`}
-                className="h-[360px] w-full border-0 bg-white"
+                title={`PDF preview of ${item.file.name}`}
+                className="h-[420px] w-full rounded-lg border border-[var(--border)] bg-white"
               />
-            ) : sourcePreview && (isImage || isSvg) ? (
+            ) : isImage && sourcePreview ? (
               <img
                 src={sourcePreview}
                 alt={`Preview of ${item.file.name}`}
-                className="max-h-[360px] max-w-full object-contain"
+                className="max-h-[420px] max-w-full object-contain"
+              />
+            ) : isWord ? (
+              <DocumentPreview
+                format={sourceFormat}
+                fileName={item.file.name}
               />
             ) : (
-              <EmptyPreview />
+              <EmptyPreview
+                title="No source preview"
+                description="This file type does not have a browser preview."
+              />
             )}
           </div>
         </PreviewPanel>
 
         <PreviewPanel
           title="Output"
-          subtitle={`.${item.settings.outputFormat}`}
+          subtitle={`${item.settings.outputFormat.toUpperCase()} · ${formatBytes(
+            item.preview?.outputSize ?? null,
+          )}`}
         >
-          <div className="flex min-h-[280px] items-center justify-center overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-4">
+          <div className="relative flex min-h-[300px] items-center justify-center overflow-hidden bg-[var(--surface-muted)] p-4">
             {generatedPreview ? (
               <img
                 src={generatedPreview}
                 alt={`Generated ${item.settings.outputFormat} preview`}
-                className="max-h-[360px] max-w-full object-contain"
+                className="max-h-[420px] max-w-full object-contain"
               />
-            ) : item.preview?.status === "generating" ? (
-              <div className="text-center">
-                <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--brand)]" />
-
-                <p className="mt-3 text-[10px] text-[var(--text-muted)]">
-                  Generating preview…
-                </p>
-              </div>
+            ) : previewStatus === "generating" ? (
+              <GeneratingPreview />
+            ) : previewStatus === "error" ? (
+              <EmptyPreview
+                title="Preview unavailable"
+                description="The conversion preview could not be generated."
+              />
             ) : (
-              <div className="text-center">
-                <p className="text-xs font-medium text-[var(--text)]">
-                  Output preview
-                </p>
-
-                <p className="mt-1 text-[10px] leading-5 text-[var(--text-muted)]">
-                  Change a conversion setting to generate an output preview.
-                </p>
-              </div>
+              <EmptyPreview
+                title="Output preview"
+                description="The generated output will appear here."
+              />
             )}
           </div>
         </PreviewPanel>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-px border-t border-[var(--border)] bg-[var(--border)] sm:grid-cols-4">
         <InfoCard label="Original" value={item.sourceLabel} />
 
         <InfoCard
@@ -186,6 +195,77 @@ export default function ConvertPreview({
   );
 }
 
+function StatusBadge({ status }: { status: string }) {
+  const label =
+    status === "generating"
+      ? "Generating"
+      : status === "ready"
+        ? "Ready"
+        : status === "error"
+          ? "Needs attention"
+          : "Waiting";
+
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+      {status === "generating" ? (
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--brand)]" />
+      ) : (
+        <span className="h-1.5 w-1.5 rounded-full bg-[var(--text-muted)]" />
+      )}
+
+      {label}
+    </span>
+  );
+}
+
+function GeneratingPreview() {
+  return (
+    <div className="text-center">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--brand)]" />
+      </div>
+
+      <p className="mt-3 text-xs font-semibold text-[var(--text)]">
+        Preparing preview
+      </p>
+
+      <p className="mt-1 max-w-[220px] text-[10px] leading-5 text-[var(--text-muted)]">
+        We are generating a lightweight preview of your output.
+      </p>
+    </div>
+  );
+}
+
+function DocumentPreview({
+  format,
+  fileName,
+}: {
+  format: string;
+  fileName: string;
+}) {
+  return (
+    <div className="text-center">
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
+        <span className="text-xs font-bold uppercase text-[var(--brand)]">
+          {format === "pdf" ? "PDF" : "DOC"}
+        </span>
+      </div>
+
+      <p className="mt-3 text-xs font-semibold text-[var(--text)]">
+        {format.toUpperCase()} document
+      </p>
+
+      <p className="mt-1 max-w-[240px] truncate text-[10px] text-[var(--text-muted)]">
+        {fileName}
+      </p>
+
+      <p className="mt-2 text-[10px] leading-5 text-[var(--text-muted)]">
+        Document content will be handled by the document conversion engine.
+      </p>
+    </div>
+  );
+}
+
 function PreviewPanel({
   title,
   subtitle,
@@ -196,13 +276,13 @@ function PreviewPanel({
   children: React.ReactNode;
 }) {
   return (
-    <div>
-      <div className="mb-2 flex items-center justify-between gap-2">
+    <div className="min-w-0">
+      <div className="flex items-center justify-between gap-2 bg-[var(--surface-subtle)] px-4 py-3">
         <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
           {title}
         </p>
 
-        <p className="max-w-[60%] truncate text-[9px] text-[var(--text-muted)]">
+        <p className="max-w-[65%] truncate text-[9px] text-[var(--text-muted)]">
           {subtitle}
         </p>
       </div>
@@ -212,31 +292,29 @@ function PreviewPanel({
   );
 }
 
-function EmptyPreview() {
+function EmptyPreview({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
   return (
-    <div className="flex min-h-[280px] items-center justify-center p-4 text-center">
-      <div>
-        <p className="text-xs font-medium text-[var(--text)]">
-          No preview available
-        </p>
+    <div className="text-center">
+      <div className="mx-auto h-10 w-10 rounded-xl border border-[var(--border)] bg-[var(--surface)]" />
 
-        <p className="mt-1 text-[10px] leading-5 text-[var(--text-muted)]">
-          This file type cannot be previewed directly in the browser.
-        </p>
-      </div>
+      <p className="mt-3 text-xs font-medium text-[var(--text)]">{title}</p>
+
+      <p className="mx-auto mt-1 max-w-[240px] text-[10px] leading-5 text-[var(--text-muted)]">
+        {description}
+      </p>
     </div>
   );
 }
 
-function InfoCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function InfoCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-[var(--border)] p-3">
+    <div className="min-w-0 bg-[var(--surface-subtle)] px-3 py-3">
       <p className="text-[9px] uppercase tracking-wide text-[var(--text-muted)]">
         {label}
       </p>
