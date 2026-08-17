@@ -178,6 +178,9 @@ export default function ConvertPage() {
       null,
     );
 
+    const conversionControllerRef = useRef<AbortController | null>(null);
+
+
   const [
     overallProgress,
     setOverallProgress,
@@ -193,6 +196,16 @@ export default function ConvertPage() {
     setErrorMessage,
   ] = useState<string | null>(null);
 
+  
+  
+
+  const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
+
+  const selectedFile = useMemo(
+    () => files.find((item) => item.id === selectedFileId) ?? files[0],
+    [files, selectedFileId],
+  );
+
   /*
    * Preview generation has its own AbortControllers.
    *
@@ -203,6 +216,12 @@ export default function ConvertPage() {
     new Map<string, AbortController>(),
   );
 
+  const filesRef = useRef<ConvertFile[]>([]);
+
+  useEffect(() => {
+    filesRef.current = files;
+  }, [files]);
+
   /*
    * Prevents an old async preview from updating
    * the component after the component unmounts.
@@ -212,16 +231,16 @@ export default function ConvertPage() {
   useEffect(() => {
     mountedRef.current = true;
 
+    const controllers = previewControllers.current;
+
     return () => {
       mountedRef.current = false;
 
-      previewControllers.current.forEach(
-        (controller) => {
-          controller.abort();
-        },
-      );
+      controllers.forEach((controller) => {
+        controller.abort();
+      });
 
-      previewControllers.current.clear();
+      controllers.clear();
     };
   }, []);
 
@@ -831,35 +850,18 @@ export default function ConvertPage() {
    * settings change.
    */
   useEffect(() => {
-    const item = files[0];
-
-    if (!item) {
+    if (!selectedFile || converting) {
       return;
     }
 
-    if (converting) {
-      return;
-    }
-
-    const timer = window.setTimeout(
-      () => {
-        void generatePreview(
-          item,
-          settings,
-        );
-      },
-      150,
-    );
+    const timer = window.setTimeout(() => {
+      void generatePreview(selectedFile, selectedFile.settings);
+    }, 200);
 
     return () => {
       window.clearTimeout(timer);
     };
-  }, [
-    files,
-    settings,
-    converting,
-    generatePreview,
-  ]);
+  }, [selectedFile, converting, generatePreview]);
 
   const convert = useCallback(
     async () => {
@@ -943,66 +945,37 @@ export default function ConvertPage() {
           );
 
           try {
-            const result =
-              await convertFile(
-                item,
-                settings,
-                ({
-                  progress,
-                }) => {
-                  if (
-                    controller.signal
-                      .aborted
-                  ) {
-                    return;
-                  }
+            const result = await convertFile(
+              item,
+              item.settings,
+              ({ progress }) => {
+                if (controller.signal.aborted) {
+                  return;
+                }
 
-                  setFiles(
-                    (current) =>
-                      current.map(
-                        (entry) =>
-                          entry.id ===
-                          item.id
-                            ? {
-                                ...entry,
+                setFiles((current) =>
+                  current.map((entry) =>
+                    entry.id === item.id
+                      ? {
+                          ...entry,
 
-                                progress:
-                                  Math.max(
-                                    0,
-                                    Math.min(
-                                      100,
-                                      progress,
-                                    ),
-                                  ),
-                              }
-                            : entry,
-                      ),
-                  );
+                          progress: Math.max(0, Math.min(100, progress)),
+                        }
+                      : entry,
+                  ),
+                );
 
-                  const overall =
-                    ((completed +
-                      progress /
-                        100) /
-                      files.length) *
-                    100;
+                const overall =
+                  ((completed + progress / 100) / files.length) * 100;
 
-                  setOverallProgress(
-                    Math.round(
-                      Math.max(
-                        0,
-                        Math.min(
-                          100,
-                          overall,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-                {
-                  signal:
-                    controller.signal,
-                },
-              );
+                setOverallProgress(
+                  Math.round(Math.max(0, Math.min(100, overall))),
+                );
+              },
+              {
+                signal: controller.signal,
+              },
+            );
 
             if (
               controller.signal
@@ -1034,27 +1007,21 @@ export default function ConvertPage() {
               ),
             );
 
-            const historyItem: ConvertHistoryItem =
-              {
-                id: createId(),
+            const historyItem: ConvertHistoryItem = {
+              id: createId(),
 
-                sourceName:
-                  item.file.name,
+              sourceName: item.file.name,
 
-                outputName:
-                  result.fileName,
+              outputName: result.fileName,
 
-                sourceFormat:
-                  item.sourceFormat,
+              sourceFormat: item.sourceFormat,
 
-                outputFormat:
-                  settings.outputFormat,
+              outputFormat: item.settings.outputFormat,
 
-                size: result.size,
+              size: result.size,
 
-                createdAt:
-                  Date.now(),
-              };
+              createdAt: Date.now(),
+            };
 
             addConversionHistory(
               historyItem,
@@ -1107,17 +1074,17 @@ export default function ConvertPage() {
           );
         }
       } finally {
-        setConverting(false);
+        
+  setConverting(false);
 
-        setConversionController(
-          null,
-        );
+  conversionControllerRef.current = null;
+
+  setConversionController(null);
       }
     },
     [
       files,
       converting,
-      settings,
     ],
   );
 
@@ -1257,23 +1224,20 @@ export default function ConvertPage() {
    * Clean everything when this page unmounts.
    */
   useEffect(() => {
+    const controllers = previewControllers.current;
+
     return () => {
       conversionController?.abort();
 
-      previewControllers.current.forEach(
-        (controller) => {
-          controller.abort();
-        },
-      );
+      controllers.forEach((controller) => {
+        controller.abort();
+      });
 
-      files.forEach(
-        revokePreview,
-      );
+      controllers.clear();
+
+      filesRef.current.forEach(revokePreview);
     };
-  }, [
-    conversionController,
-    files,
-  ]);
+  }, [conversionController]);
 
   const successfulCount =
     useMemo(
@@ -1297,7 +1261,7 @@ export default function ConvertPage() {
       [files],
     );
 
-  const firstFile = files[0];
+  
 
   return (
     <main className="min-h-screen w-full bg-[var(--background)]">
@@ -1318,40 +1282,24 @@ export default function ConvertPage() {
               </h1>
 
               <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--text-muted)]">
-                Convert images, SVG artwork
-                and icon assets between
-                common formats directly in
-                your browser.
+                Convert images, SVG artwork and icon assets between common
+                formats directly in your browser.
               </p>
             </div>
 
             {files.length > 0 ? (
               <div className="grid grid-cols-3 gap-2 sm:flex">
-                <Stat
-                  label="Files"
-                  value={files.length}
-                />
+                <Stat label="Files" value={files.length} />
 
-                <Stat
-                  label="Done"
-                  value={
-                    successfulCount
-                  }
-                />
+                <Stat label="Done" value={successfulCount} />
 
-                <Stat
-                  label="Errors"
-                  value={failedCount}
-                />
+                <Stat label="Errors" value={failedCount} />
               </div>
             ) : null}
           </div>
         </header>
 
-        <ConvertUploader
-          onFiles={addFiles}
-          disabled={converting}
-        />
+        <ConvertUploader onFiles={addFiles} disabled={converting} />
 
         {errorMessage ? (
           <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400">
@@ -1364,38 +1312,28 @@ export default function ConvertPage() {
             <div className="min-w-0 space-y-5">
               <ConvertQueue
                 files={files}
+                selectedFileId={selectedFileId}
+                onSelect={setSelectedFileId}
                 onRemove={removeFile}
                 onMove={moveFile}
                 onClear={clearQueue}
               />
 
-              <ConvertPreview
-                item={firstFile}
-              />
+              <ConvertPreview item={selectedFile} />
 
               <ConvertProgress
                 active={converting}
-                progress={
-                  overallProgress
-                }
-                completed={
-                  completedCount
-                }
+                progress={overallProgress}
+                completed={completedCount}
                 total={files.length}
               />
 
-              <ConvertResults
-                files={files}
-              />
+              <ConvertResults files={files} />
 
               <ConvertExport
                 files={files}
-                onDownload={
-                  downloadFile
-                }
-                onDownloadAll={
-                  downloadAll
-                }
+                onDownload={downloadFile}
+                onDownloadAll={downloadAll}
               />
             </div>
 
@@ -1404,20 +1342,14 @@ export default function ConvertPage() {
                 <ConvertSettings
                   files={files}
                   settings={settings}
-                  onChange={
-                    updateSettings
-                  }
-                  onReset={
-                    resetSettings
-                  }
+                  onChange={updateSettings}
+                  onReset={resetSettings}
                 />
 
                 {converting ? (
                   <button
                     type="button"
-                    onClick={
-                      cancelConversion
-                    }
+                    onClick={cancelConversion}
                     className="mt-4 flex h-12 w-full items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] px-5 text-sm font-semibold text-[var(--text)] transition hover:bg-[var(--surface-subtle)]"
                   >
                     Cancel conversion
@@ -1426,26 +1358,17 @@ export default function ConvertPage() {
                   <button
                     type="button"
                     onClick={convert}
-                    disabled={
-                      !files.length
-                    }
+                    disabled={!files.length}
                     className="mt-4 flex h-12 w-full items-center justify-center rounded-xl bg-[var(--brand)] px-5 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Convert{" "}
-                    {files.length}{" "}
-                    {files.length ===
-                    1
-                      ? "file"
-                      : "files"}
+                    Convert {files.length}{" "}
+                    {files.length === 1 ? "file" : "files"}
                   </button>
                 )}
 
                 <p className="mt-2 text-center text-[10px] leading-4 text-[var(--text-muted)]">
-                  Files are processed
-                  locally in your
-                  browser whenever the
-                  browser supports the
-                  selected format.
+                  Files are processed locally in your browser whenever the
+                  browser supports the selected format.
                 </p>
               </div>
             </aside>
@@ -1464,9 +1387,7 @@ export default function ConvertPage() {
               </h2>
 
               <p className="mt-1 text-[11px] text-[var(--text-muted)]">
-                Common conversion
-                workflows are built
-                directly into the
+                Common conversion workflows are built directly into the
                 workspace.
               </p>
             </div>

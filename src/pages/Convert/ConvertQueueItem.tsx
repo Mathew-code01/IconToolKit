@@ -6,6 +6,8 @@ interface ConvertQueueItemProps {
   item: ConvertFile;
   index: number;
   total: number;
+  selected?: boolean;
+  onSelect?: () => void;
   onRemove: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
