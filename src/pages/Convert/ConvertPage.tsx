@@ -732,9 +732,11 @@ export default function ConvertPage() {
         );
 
         try {
-          const result = await previewConversion(item, previewSettings, {
-            signal: controller.signal,
-          });
+          const result = await previewConversion(
+  item,
+  previewSettings,
+  controller.signal,
+);
 
           if (controller.signal.aborted || !mountedRef.current) {
             revokeUrl(result.previewUrl);
