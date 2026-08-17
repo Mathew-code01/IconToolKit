@@ -16,6 +16,7 @@
     "icojs": "^0.23.0",
     "jszip": "^3.10.1",
     "lucide-react": "^1.31.0",
+    "mammoth": "^1.12.1",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.2.108",
     "react": "^19.2.8",

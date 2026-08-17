@@ -19,6 +19,11 @@ import type {
 } from "./ConvertTypes";
 
 import {
+  getConvertFileCategory,
+  getConvertFileCategoryLabel,
+} from "./ConvertTypes";
+
+import {
   FORMAT_LABELS,
   getFormatFromFile,
 } from "./ConvertToolRegistry";
@@ -93,10 +98,18 @@ function createDefaultSettings(
   let outputFormat: ConvertFormat;
 
   switch (sourceFormat) {
+    case "pdf":
+      outputFormat = "png";
+      break;
+
+    case "doc":
+    case "docx":
+      outputFormat = "pdf";
+      break;
+
     case "webp":
     case "svg":
     case "ico":
-    case "pdf":
       outputFormat = "png";
       break;
 
@@ -105,6 +118,7 @@ function createDefaultSettings(
     case "bmp":
     case "gif":
     case "tiff":
+    case "avif":
     default:
       outputFormat = "webp";
       break;
@@ -112,7 +126,9 @@ function createDefaultSettings(
 
   return {
     ...DEFAULT_SETTINGS,
+
     outputFormat,
+
     icoSizes: [...DEFAULT_SETTINGS.icoSizes],
   };
 }
@@ -369,202 +385,198 @@ export default function ConvertPage() {
       );
     }, []);
 
-  const addFiles = useCallback(
-    async (incoming: File[]) => {
-      setErrorMessage(null);
+  const addFiles = useCallback(async (incoming: File[]) => {
+    setErrorMessage(null);
 
-      const next: ConvertFile[] = [];
+    if (!incoming.length) {
+      return;
+    }
 
-      for (const file of incoming) {
-        const sourceFormat =
-          getFormatFromFile(file);
+    /*
+     * Build queue entries immediately.
+     *
+     * Do NOT wait for image dimensions before adding
+     * the files to the UI. This is important for bulk
+     * uploads because one problematic file should never
+     * block the rest of the queue.
+     */
+    const candidates: ConvertFile[] = [];
 
-        if (!sourceFormat) {
-          continue;
-        }
+    const unsupported: string[] = [];
 
+    for (const file of incoming) {
+      const sourceFormat = getFormatFromFile(file);
+
+      if (!sourceFormat) {
+        unsupported.push(file.name);
+        continue;
+      }
+
+      const category = getConvertFileCategory(sourceFormat);
+
+      const fileSettings = createDefaultSettings(sourceFormat);
+
+      candidates.push({
+        id: createId(),
+
+        file,
+
+        sourceFormat,
+
+        sourceLabel: FORMAT_LABELS[sourceFormat] ?? sourceFormat.toUpperCase(),
+
+        category,
+
+        categoryLabel: getConvertFileCategoryLabel(category),
+
+        previewUrl: createPreviewUrl(file),
+
+        width: null,
+
+        height: null,
+
+        status: "queued",
+
+        progress: 0,
+
+        error: null,
+
+        result: null,
+
+        settings: fileSettings,
+
+        preview: {
+          sourceSize: file.size,
+
+          sourceWidth: null,
+
+          sourceHeight: null,
+
+          outputSize: null,
+
+          outputWidth: null,
+
+          outputHeight: null,
+
+          sourceFormat,
+
+          outputFormat: fileSettings.outputFormat,
+
+          sizeEstimated: false,
+
+          previewUrl: null,
+
+          status: "idle",
+
+          error: null,
+        },
+      });
+    }
+
+    if (!candidates.length) {
+      setErrorMessage(
+        unsupported.length
+          ? `Unsupported file type${
+              unsupported.length === 1 ? "" : "s"
+            }: ${unsupported.join(", ")}`
+          : "No supported files were found.",
+      );
+
+      return;
+    }
+
+    /*
+     * Add every supported file immediately.
+     */
+    setFiles((current) => [...current, ...candidates]);
+
+    /*
+     * Select the first newly-added file if
+     * nothing is currently selected.
+     */
+    setSelectedFileId((current) => current ?? candidates[0]?.id ?? null);
+
+    /*
+     * If this is the first upload, use the first
+     * file's natural output format as the workspace
+     * default.
+     */
+    setSettings((current) => {
+      const first = candidates[0];
+
+      if (!first) {
+        return current;
+      }
+
+      const shouldUseFirstFileSettings = filesRef.current.length === 0;
+
+      return shouldUseFirstFileSettings
+        ? {
+            ...first.settings,
+            icoSizes: [...first.settings.icoSizes],
+          }
+        : current;
+    });
+
+    /*
+     * Detect dimensions independently.
+     *
+     * Each file succeeds/fails independently.
+     */
+    await Promise.all(
+      candidates.map(async (candidate) => {
         try {
-          const dimensions =
-            await getFileDimensions(file);
+          const dimensions = await getFileDimensions(candidate.file);
 
-          const fileSettings =
-            createDefaultSettings(
-              sourceFormat,
-            );
+          if (!mountedRef.current) {
+            return;
+          }
 
-          next.push({
-            id: createId(),
+          setFiles((current) =>
+            current.map((item) =>
+              item.id === candidate.id
+                ? {
+                    ...item,
 
-            file,
+                    width: dimensions.width,
 
-            sourceFormat,
+                    height: dimensions.height,
 
-            sourceLabel:
-              FORMAT_LABELS[sourceFormat],
+                    preview: {
+                      ...item.preview,
 
-            previewUrl:
-              createPreviewUrl(file),
+                      sourceWidth: dimensions.width,
 
-            width: dimensions.width,
+                      sourceHeight: dimensions.height,
 
-            height: dimensions.height,
+                      outputWidth: dimensions.width,
 
-            status: "queued",
-
-            progress: 0,
-
-            error: null,
-
-            result: null,
-
-            settings: fileSettings,
-
-            preview: {
-              sourceSize: file.size,
-
-              sourceWidth:
-                dimensions.width,
-
-              sourceHeight:
-                dimensions.height,
-
-              outputSize: null,
-
-              outputWidth:
-                dimensions.width,
-
-              outputHeight:
-                dimensions.height,
-
-              sourceFormat,
-
-              outputFormat:
-                fileSettings.outputFormat,
-
-              sizeEstimated: false,
-
-              previewUrl: null,
-
-              status: "idle",
-
-              error: null,
-            },
-          });
+                      outputHeight: dimensions.height,
+                    },
+                  }
+                : item,
+            ),
+          );
         } catch {
           /*
-           * Dimension detection is intentionally
-           * non-fatal. The engine can still attempt
-           * the conversion later.
+           * Dimension detection is optional.
+           *
+           * Do not remove the file and do not mark
+           * it as failed just because dimensions
+           * couldn't be detected.
            */
-          const fileSettings =
-            createDefaultSettings(
-              sourceFormat,
-            );
-
-          next.push({
-            id: createId(),
-
-            file,
-
-            sourceFormat,
-
-            sourceLabel:
-              FORMAT_LABELS[sourceFormat],
-
-            previewUrl:
-              createPreviewUrl(file),
-
-            width: null,
-
-            height: null,
-
-            status: "queued",
-
-            progress: 0,
-
-            error: null,
-
-            result: null,
-
-            settings: fileSettings,
-
-            preview: {
-              sourceSize: file.size,
-
-              sourceWidth: null,
-
-              sourceHeight: null,
-
-              outputSize: null,
-
-              outputWidth: null,
-
-              outputHeight: null,
-
-              sourceFormat,
-
-              outputFormat:
-                fileSettings.outputFormat,
-
-              sizeEstimated: false,
-
-              previewUrl: null,
-
-              status: "idle",
-
-              error: null,
-            },
-          });
         }
-      }
+      }),
+    );
 
-      if (!next.length) {
-        setErrorMessage(
-          "No supported files were found.",
-        );
-
-        return;
-      }
-
-      setFiles((current) => [
-        ...current,
-        ...next,
-      ]);
-
-      /*
-       * Select a sensible output format when
-       * the first file enters the workspace.
-       */
-      setFiles((current) => {
-        /*
-         * This callback runs after the previous
-         * queued files have been appended.
-         *
-         * The global settings are adjusted
-         * separately below, so this state update
-         * only returns the current collection.
-         */
-        return current;
-      });
-
-      /*
-       * We use the state that existed before this
-       * add operation to determine whether this
-       * was the first file.
-       */
-      setSettings((current) => {
-        /*
-         * If files already existed, preserve the
-         * user's current settings.
-         *
-         * The actual first-file detection is handled
-         * by the queued files effect below.
-         */
-        return current;
-      });
-    },
-    [],
-  );
+    if (unsupported.length) {
+      setErrorMessage(
+        `${unsupported.length} unsupported file${
+          unsupported.length === 1 ? "" : "s"
+        } skipped: ${unsupported.join(", ")}`,
+      );
+    }
+  }, []);
 
   /*
    * When the first file is added, choose a sensible
@@ -691,6 +703,10 @@ export default function ConvertPage() {
         const controller =
           new AbortController();
 
+          const timeoutId = window.setTimeout(() => {
+            controller.abort();
+          }, 30_000);
+
         previewControllers.current.set(
           item.id,
           controller,
@@ -716,24 +732,12 @@ export default function ConvertPage() {
         );
 
         try {
-          const result =
-            await previewConversion(
-              item,
-              previewSettings,
-              {
-                signal:
-                  controller.signal,
-              },
-            );
+          const result = await previewConversion(item, previewSettings, {
+            signal: controller.signal,
+          });
 
-          if (
-            controller.signal
-              .aborted ||
-            !mountedRef.current
-          ) {
-            revokeUrl(
-              result.previewUrl,
-            );
+          if (controller.signal.aborted || !mountedRef.current) {
+            revokeUrl(result.previewUrl);
 
             return;
           }
@@ -742,34 +746,21 @@ export default function ConvertPage() {
            * Only replace the preview if this is
            * still the current controller for the item.
            */
-          const currentController =
-            previewControllers.current.get(
-              item.id,
-            );
+          const currentController = previewControllers.current.get(item.id);
 
-          if (
-            currentController !==
-            controller
-          ) {
-            revokeUrl(
-              result.previewUrl,
-            );
+          if (currentController !== controller) {
+            revokeUrl(result.previewUrl);
 
             return;
           }
 
           setFiles((current) =>
             current.map((entry) => {
-              if (
-                entry.id !== item.id
-              ) {
+              if (entry.id !== item.id) {
                 return entry;
               }
 
-              revokeUrl(
-                entry.preview
-                  .previewUrl,
-              );
+              revokeUrl(entry.preview.previewUrl);
 
               return {
                 ...entry,
@@ -777,33 +768,27 @@ export default function ConvertPage() {
                 preview: {
                   ...entry.preview,
 
-                  outputSize:
-                    result.size,
+                  outputSize: result.size,
 
-                  outputWidth:
-                    result.width,
+                  outputWidth: result.width,
 
-                  outputHeight:
-                    result.height,
+                  outputHeight: result.height,
 
-                  previewUrl:
-                    result.previewUrl,
+                  previewUrl: result.previewUrl,
 
-                  status: "ready",
+                  status: result.previewUrl ? "ready" : "error",
 
                   sizeEstimated: true,
 
-                  error: null,
+                  error: result.previewUrl
+                    ? null
+                    : "Preview could not be generated for this format.",
                 },
               };
             }),
           );
         } catch (error) {
-          if (
-            controller.signal
-              .aborted ||
-            !mountedRef.current
-          ) {
+          if (controller.signal.aborted || !mountedRef.current) {
             return;
           }
 
@@ -830,14 +815,10 @@ export default function ConvertPage() {
             ),
           );
         } finally {
-          if (
-            previewControllers.current.get(
-              item.id,
-            ) === controller
-          ) {
-            previewControllers.current.delete(
-              item.id,
-            );
+          window.clearTimeout(timeoutId);
+
+          if (previewControllers.current.get(item.id) === controller) {
+            previewControllers.current.delete(item.id);
           }
         }
       },
@@ -854,14 +835,23 @@ export default function ConvertPage() {
       return;
     }
 
+    const fileId = selectedFile.id;
+    const previewSettings = selectedFile.settings;
+
     const timer = window.setTimeout(() => {
-      void generatePreview(selectedFile, selectedFile.settings);
-    }, 200);
+      const latest = filesRef.current.find((item) => item.id === fileId);
+
+      if (!latest) {
+        return;
+      }
+
+      void generatePreview(latest, previewSettings);
+    }, 250);
 
     return () => {
       window.clearTimeout(timer);
     };
-  }, [selectedFile, converting, generatePreview]);
+  }, [selectedFile?.id, selectedFile?.settings, converting, generatePreview]);
 
   const convert = useCallback(
     async () => {

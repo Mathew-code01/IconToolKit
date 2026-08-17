@@ -1,3 +1,5 @@
+# .gitignore
+
 # Logs
 logs
 *.log
@@ -22,3 +24,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+
+public/pdfjs-dist

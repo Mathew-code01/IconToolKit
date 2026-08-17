@@ -1,5 +1,7 @@
 // src/pages/Convert/ConvertQueueItem.tsx
 
+// src/pages/Convert/ConvertQueueItem.tsx
+
 import type { ConvertFile } from "./ConvertTypes";
 
 interface ConvertQueueItemProps {
@@ -29,6 +31,8 @@ export default function ConvertQueueItem({
   item,
   index,
   total,
+  selected = false,
+  onSelect,
   onRemove,
   onMoveUp,
   onMoveDown,
@@ -36,60 +40,96 @@ export default function ConvertQueueItem({
   const isBusy = item.status === "processing";
 
   return (
-    <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-3">
+    <div
+      className={[
+        "group rounded-[var(--radius-lg)] border p-3 transition-all",
+        selected
+          ? "border-[var(--brand)] bg-[var(--surface-muted)] shadow-sm ring-1 ring-[var(--brand)]/20"
+          : "border-[var(--border)] bg-[var(--surface)] hover:border-[var(--brand)]/40 hover:bg-[var(--surface-muted)]/50",
+      ].join(" ")}
+    >
       <div className="flex gap-3">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--surface-muted)]">
-          {item.previewUrl ? (
-            <img
-              src={item.previewUrl}
-              alt=""
-              className="h-full w-full object-contain"
-            />
-          ) : (
-            <span className="text-[9px] font-semibold uppercase text-[var(--text-muted)]">
-              {item.sourceLabel}
-            </span>
-          )}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-semibold text-[var(--text)]">
-            {item.file.name}
-          </p>
-
-          <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-[10px] text-[var(--text-muted)]">
-            <span>{formatBytes(item.file.size)}</span>
-
-            {item.width && item.height ? (
-              <span>
-                {item.width} × {item.height}
-              </span>
-            ) : null}
-
-            <span className="uppercase">{item.sourceLabel}</span>
-          </div>
-
-          {isBusy ? (
-            <div className="mt-2">
-              <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-muted)]">
-                <div
-                  className="h-full rounded-full bg-[var(--brand)] transition-all"
-                  style={{ width: `${item.progress}%` }}
+        <button
+          type="button"
+          onClick={onSelect}
+          disabled={isBusy}
+          className="min-w-0 flex-1 text-left disabled:cursor-default"
+          aria-label={`Preview ${item.file.name}`}
+        >
+          <div className="flex gap-3">
+            <div
+              className={[
+                "flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-[var(--surface-muted)] transition",
+                selected
+                  ? "border-[var(--brand)]"
+                  : "border-[var(--border)]",
+              ].join(" ")}
+            >
+              {item.previewUrl ? (
+                <img
+                  src={item.previewUrl}
+                  alt=""
+                  className="h-full w-full object-contain"
                 />
-              </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-1">
+                  <span className="text-[9px] font-bold uppercase text-[var(--text-muted)]">
+                    {item.sourceLabel}
+                  </span>
+
+                  <span className="text-[8px] text-[var(--text-muted)]">
+                    Preview
+                  </span>
+                </div>
+              )}
             </div>
-          ) : null}
 
-          {item.status === "error" && item.error ? (
-            <p className="mt-2 text-[10px] text-red-500">{item.error}</p>
-          ) : null}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold text-[var(--text)]">
+                {item.file.name}
+              </p>
 
-          {item.status === "success" ? (
-            <p className="mt-2 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-              Conversion complete
-            </p>
-          ) : null}
-        </div>
+              <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-[10px] text-[var(--text-muted)]">
+                <span>{formatBytes(item.file.size)}</span>
+
+                {item.width && item.height ? (
+                  <span>
+                    {item.width} × {item.height}
+                  </span>
+                ) : null}
+
+                <span className="uppercase">
+                  {item.sourceLabel}
+                </span>
+              </div>
+
+              {isBusy ? (
+                <div className="mt-2">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                    <div
+                      className="h-full rounded-full bg-[var(--brand)] transition-all"
+                      style={{
+                        width: `${item.progress}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : null}
+
+              {item.status === "error" && item.error ? (
+                <p className="mt-2 text-[10px] text-red-500">
+                  {item.error}
+                </p>
+              ) : null}
+
+              {item.status === "success" ? (
+                <p className="mt-2 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                  Conversion complete
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </button>
 
         <div className="flex shrink-0 items-start gap-1">
           <button
@@ -117,7 +157,7 @@ export default function ConvertQueueItem({
             onClick={onRemove}
             disabled={isBusy}
             className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--border)] text-[var(--text-muted)] hover:border-red-300 hover:text-red-500 disabled:opacity-30"
-            aria-label="Remove file"
+            aria-label={`Remove ${item.file.name}`}
           >
             ×
           </button>

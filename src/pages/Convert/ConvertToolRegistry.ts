@@ -13,6 +13,10 @@ export const FORMAT_LABELS: Record<ConvertFormat, string> = {
   bmp: "BMP",
   gif: "GIF",
   tiff: "TIFF",
+  doc: "DOC",
+  docx: "DOCX",
+  txt: "TXT",
+  rtf: "RTF",
 };
 
 export const CONVERSION_TOOLS: ConversionTool[] = [
@@ -210,6 +214,53 @@ export const CONVERSION_TOOLS: ConversionTool[] = [
     accepts: ["application/pdf"],
     browserSupported: false,
   },
+  {
+    id: "docx-to-txt",
+    name: "Word to TXT",
+    description: "Extract text from DOCX documents directly in the browser.",
+    category: "document",
+    from: ["docx"],
+    to: ["txt"],
+    accepts: [
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ],
+    browserSupported: true,
+  },
+  {
+    id: "docx-to-pdf",
+    name: "Word to PDF",
+    description: "Convert DOCX documents to PDF in the browser.",
+    category: "document",
+    from: ["docx"],
+    to: ["pdf"],
+    accepts: [
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ],
+    browserSupported: true,
+  },
+  {
+    id: "docx-to-docx",
+    name: "DOCX",
+    description: "Prepare the DOCX document without changing its contents.",
+    category: "document",
+    from: ["docx"],
+    to: ["docx"],
+    accepts: [
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ],
+    browserSupported: true,
+  },
+  {
+    id: "doc-to-txt",
+    name: "DOC to TXT",
+    description:
+      "Extract text from legacy Word documents when browser decoding is supported.",
+    category: "document",
+    from: ["doc"],
+    to: ["txt"],
+    accepts: ["application/msword"],
+    browserSupported: false,
+  },
 ];
 
 export const OUTPUT_FORMATS: ConvertFormat[] = [
@@ -273,6 +324,29 @@ export function getFormatFromFile(file: File): ConvertFormat | null {
   if (type === "application/pdf" || name.endsWith(".pdf")) {
     return "pdf";
   }
+  if (
+    type ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    name.endsWith(".docx")
+  ) {
+    return "docx";
+  }
+
+  if (type === "application/msword" || name.endsWith(".doc")) {
+    return "doc";
+  }
+
+  if (type === "text/plain" || name.endsWith(".txt")) {
+    return "txt";
+  }
+
+  if (
+    type === "application/rtf" ||
+    type === "text/rtf" ||
+    name.endsWith(".rtf")
+  ) {
+    return "rtf";
+  }
 
   return null;
 }
@@ -281,24 +355,46 @@ export function getMimeType(format: ConvertFormat): string {
   switch (format) {
     case "jpg":
       return "image/jpeg";
+
     case "png":
       return "image/png";
+
     case "webp":
       return "image/webp";
+
     case "avif":
       return "image/avif";
+
     case "svg":
       return "image/svg+xml";
+
     case "ico":
       return "image/x-icon";
+
     case "pdf":
       return "application/pdf";
+
     case "bmp":
       return "image/bmp";
+
     case "gif":
       return "image/gif";
+
     case "tiff":
       return "image/tiff";
+
+    case "doc":
+      return "application/msword";
+
+    case "docx":
+      return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+    case "txt":
+      return "text/plain;charset=utf-8";
+
+    case "rtf":
+      return "application/rtf";
+
     default:
       return "application/octet-stream";
   }
