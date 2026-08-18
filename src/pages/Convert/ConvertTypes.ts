@@ -1,5 +1,7 @@
 // src/pages/Convert/ConvertTypes.ts
 
+// src/pages/Convert/ConvertTypes.ts
+
 export type ConvertFormat =
   | "png"
   | "jpg"
@@ -16,18 +18,35 @@ export type ConvertFormat =
   | "txt"
   | "rtf";
 
-export type ConversionCategory = "raster" | "vector" | "icon" | "document";
+export type ConversionCategory =
+  | "raster"
+  | "vector"
+  | "icon"
+  | "document";
 
-export type ConversionStatus = "queued" | "processing" | "success" | "error";
+export type ConversionStatus =
+  | "queued"
+  | "processing"
+  | "success"
+  | "error";
+
+export type ConversionOutputMode =
+  | "smart"
+  | "single"
+  | "individual";
 
 export interface ConversionTool {
   id: string;
   name: string;
   description: string;
   category: ConversionCategory;
+
   from: ConvertFormat[];
+
   to: ConvertFormat[];
+
   accepts: string[];
+
   browserSupported?: boolean;
 }
 
@@ -40,10 +59,6 @@ export interface ConvertFile {
 
   sourceLabel: string;
 
-  /**
-   * Human-friendly classification used by the queue:
-   * Image, PDF, Word, etc.
-   */
   category: ConvertFileCategory;
 
   categoryLabel: string;
@@ -51,6 +66,7 @@ export interface ConvertFile {
   previewUrl: string | null;
 
   width: number | null;
+
   height: number | null;
 
   status: ConversionStatus;
@@ -61,6 +77,12 @@ export interface ConvertFile {
 
   result: ConversionResult | null;
 
+  /**
+   * Settings belonging to this individual file.
+   *
+   * This is important because a mixed queue does not
+   * necessarily use one output format for every file.
+   */
   settings: ConvertSettingsState;
 
   preview: ConversionPreview;
@@ -83,6 +105,22 @@ export interface ConversionResult {
 }
 
 export interface ConvertSettingsState {
+  /**
+   * Smart:
+   * Each file uses its recommended compatible output.
+   *
+   * Single:
+   * The user is applying one format to the selected
+   * compatible files.
+   *
+   * Individual:
+   * Each file can have its own manually chosen format.
+   */
+  outputMode: ConversionOutputMode;
+
+  /**
+   * The output format currently assigned to this file.
+   */
   outputFormat: ConvertFormat;
 
   quality: number;
@@ -137,7 +175,11 @@ export interface ConversionPreview {
 
   previewUrl: string | null;
 
-  status: "idle" | "generating" | "ready" | "error";
+  status:
+    | "idle"
+    | "generating"
+    | "ready"
+    | "error";
 
   error: string | null;
 }
