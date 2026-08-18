@@ -66,11 +66,11 @@ function getStatusInfo(status: ConversionStatus) {
       return {
         label: "Error",
         className: [
-          "border-[var(--danger)]/20",
-          "bg-[var(--danger)]/8",
-          "text-[var(--danger)]",
+          "border-[var(--error)]/20",
+          "bg-[var(--error)]/8",
+          "text-[var(--error)]",
         ].join(" "),
-        dot: "bg-[var(--danger)]",
+        dot: "bg-[var(--error)]",
       };
 
     case "queued":
@@ -354,8 +354,8 @@ export default function ConvertQueueItem({
                   className={[
                     "flex items-start gap-2",
                     "rounded-xl",
-                    "border border-[var(--danger)]/15",
-                    "bg-[var(--danger)]/5",
+                    "border border-[var(--error)]/15",
+                    "bg-[var(--error)]/5",
                     compact ? "mt-1.5 px-2 py-1.5" : "mt-2.5 px-2.5 py-2",
                   ].join(" ")}
                 >
@@ -363,8 +363,8 @@ export default function ConvertQueueItem({
                     className={[
                       "flex shrink-0 items-center justify-center",
                       "rounded-full",
-                      "bg-[var(--danger)]/10",
-                      "font-bold text-[var(--danger)]",
+                      "bg-[var(--error)]/10",
+                      "font-bold text-[var(--error)]",
                       compact ? "h-4 w-4 text-[8px]" : "h-5 w-5 text-[9px]",
                     ].join(" ")}
                     aria-hidden="true"
@@ -376,7 +376,7 @@ export default function ConvertQueueItem({
                     className={[
                       "min-w-0 flex-1",
                       "font-medium leading-4",
-                      "text-[var(--danger)]",
+                      "text-[var(--error)]",
                       compact ? "text-[8px]" : "text-[9px] sm:text-[10px]",
                     ].join(" ")}
                     title={item.error}
@@ -490,9 +490,9 @@ export default function ConvertQueueItem({
               "bg-[var(--surface-subtle)]",
               "text-[var(--text-muted)]",
               "transition-all",
-              "hover:border-[var(--danger)]/20",
-              "hover:bg-[var(--danger)]/8",
-              "hover:text-[var(--danger)]",
+              "hover:border-[var(--error)]/20",
+              "hover:bg-[var(--error)]/8",
+              "hover:text-[var(--error)]",
               "disabled:cursor-not-allowed",
               "disabled:opacity-30",
               compact ? "h-6 w-6 text-[9px]" : "h-7 w-7 text-[11px]",

@@ -343,14 +343,14 @@ export default function ConvertQueue({
                       "transition-all",
                       confirmClear
                         ? [
-                            "border border-[var(--danger)]/20",
-                            "bg-[var(--danger)]/10",
-                            "text-[var(--danger)]",
+                            "border border-[var(--error)]/20",
+                            "bg-[var(--error)]/10",
+                            "text-[var(--error)]",
                           ].join(" ")
                         : [
                             "text-[var(--text-muted)]",
                             "hover:bg-[var(--surface-subtle)]",
-                            "hover:text-[var(--danger)]",
+                            "hover:text-[var(--error)]",
                           ].join(" "),
                     ].join(" ")}
                   >
@@ -960,7 +960,7 @@ function QueueSummary({
         "text-center",
         "transition-colors",
         tone === "danger" && value > 0
-          ? ["border-[var(--danger)]/20", "bg-[var(--danger)]/5"].join(" ")
+          ? ["border-[var(--error)]/20", "bg-[var(--error)]/5"].join(" ")
           : ["border-[var(--border)]", "bg-[var(--surface-subtle)]"].join(" "),
       ].join(" ")}
     >
@@ -968,7 +968,7 @@ function QueueSummary({
         className={[
           "text-sm font-extrabold leading-none",
           tone === "danger" && value > 0
-            ? "text-[var(--danger)]"
+            ? "text-[var(--error)]"
             : "text-[var(--text)]",
         ].join(" ")}
       >
