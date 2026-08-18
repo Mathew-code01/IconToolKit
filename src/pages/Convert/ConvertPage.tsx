@@ -58,37 +58,39 @@ function createId(): string {
     .slice(2)}`;
 }
 
+
+
 const DEFAULT_SETTINGS: ConvertSettingsState = {
+  outputMode: "smart",
   outputFormat: "webp",
 
-  quality: 90,
+  quality: 85,
 
   resizeEnabled: false,
+
   width: null,
   height: null,
+
   keepAspectRatio: true,
 
   backgroundEnabled: false,
+
   backgroundColor: "#ffffff",
 
   preserveTransparency: true,
 
-  dpi: 96,
+  dpi: 144,
 
   fileNameMode: "original",
+
   customFileName: "",
+
   suffix: "-converted",
 
-  icoSizes: [
-    16,
-    32,
-    48,
-    64,
-    128,
-    256,
-  ],
+  icoSizes: [16, 32, 48, 64, 128, 256],
 
   pdfPageSize: "auto",
+
   pdfOrientation: "portrait",
 };
 
