@@ -186,13 +186,7 @@ export default function ConvertPage() {
   const [converting, setConverting] =
     useState(false);
 
-  const [
-    conversionController,
-    setConversionController,
-  ] =
-    useState<AbortController | null>(
-      null,
-    );
+  
 
     const conversionControllerRef = useRef<AbortController | null>(null);
 
@@ -853,8 +847,8 @@ export default function ConvertPage() {
     return () => {
       window.clearTimeout(timer);
     };
-  }, [selectedFile?.id, selectedFile?.settings, converting, generatePreview]);
-
+  }, [selectedFile, converting, generatePreview]);
+  
   const convert = useCallback(
     async () => {
       if (
@@ -867,9 +861,9 @@ export default function ConvertPage() {
       const controller =
         new AbortController();
 
-      setConversionController(
-        controller,
-      );
+        conversionControllerRef.current = controller;
+
+      
 
       setConverting(true);
 
@@ -912,10 +906,7 @@ export default function ConvertPage() {
 
       try {
         for (const item of files) {
-          if (
-            controller.signal
-              .aborted
-          ) {
+          if (controller.signal.aborted) {
             break;
           }
 
@@ -925,8 +916,7 @@ export default function ConvertPage() {
                 ? {
                     ...entry,
 
-                    status:
-                      "processing",
+                    status: "processing",
 
                     progress: 0,
 
@@ -969,33 +959,25 @@ export default function ConvertPage() {
               },
             );
 
-            if (
-              controller.signal
-                .aborted
-            ) {
-              revokeUrl(
-                result.downloadUrl,
-              );
+            if (controller.signal.aborted) {
+              revokeUrl(result.downloadUrl);
 
               break;
             }
 
             setFiles((current) =>
-              current.map(
-                (entry) =>
-                  entry.id ===
-                  item.id
-                    ? {
-                        ...entry,
+              current.map((entry) =>
+                entry.id === item.id
+                  ? {
+                      ...entry,
 
-                        status:
-                          "success",
+                      status: "success",
 
-                        progress: 100,
+                      progress: 100,
 
-                        result,
-                      }
-                    : entry,
+                      result,
+                    }
+                  : entry,
               ),
             );
 
@@ -1015,63 +997,45 @@ export default function ConvertPage() {
               createdAt: Date.now(),
             };
 
-            addConversionHistory(
-              historyItem,
-            );
+            addConversionHistory(historyItem);
           } catch (error) {
-            if (
-              controller.signal
-                .aborted
-            ) {
+            if (controller.signal.aborted) {
               break;
             }
 
             const message =
-              error instanceof Error
-                ? error.message
-                : "Conversion failed.";
+              error instanceof Error ? error.message : "Conversion failed.";
 
             setFiles((current) =>
-              current.map(
-                (entry) =>
-                  entry.id ===
-                  item.id
-                    ? {
-                        ...entry,
+              current.map((entry) =>
+                entry.id === item.id
+                  ? {
+                      ...entry,
 
-                        status:
-                          "error",
+                      status: "error",
 
-                        progress: 0,
+                      progress: 0,
 
-                        error: message,
-                      }
-                    : entry,
+                      error: message,
+                    }
+                  : entry,
               ),
             );
           }
 
           completed += 1;
 
-          setCompletedCount(
-            completed,
-          );
+          setCompletedCount(completed);
 
-          setOverallProgress(
-            Math.round(
-              (completed /
-                files.length) *
-                100,
-            ),
-          );
+          setOverallProgress(Math.round((completed / files.length) * 100));
         }
       } finally {
+        if (conversionControllerRef.current === controller) {
+          conversionControllerRef.current = null;
+        }
+
+        setConverting(false);
         
-  setConverting(false);
-
-  conversionControllerRef.current = null;
-
-  setConversionController(null);
       }
     },
     [
@@ -1080,10 +1044,9 @@ export default function ConvertPage() {
     ],
   );
 
-  const cancelConversion =
-    useCallback(() => {
-      conversionController?.abort();
-    }, [conversionController]);
+ const cancelConversion = useCallback(() => {
+   conversionControllerRef.current?.abort();
+ }, []);
 
   const downloadFile =
     useCallback(
@@ -1219,7 +1182,7 @@ export default function ConvertPage() {
     const controllers = previewControllers.current;
 
     return () => {
-      conversionController?.abort();
+      conversionControllerRef.current?.abort();
 
       controllers.forEach((controller) => {
         controller.abort();
@@ -1229,7 +1192,7 @@ export default function ConvertPage() {
 
       filesRef.current.forEach(revokePreview);
     };
-  }, [conversionController]);
+  }, []);
 
   const successfulCount =
     useMemo(
