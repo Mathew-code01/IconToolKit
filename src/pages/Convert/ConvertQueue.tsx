@@ -237,7 +237,7 @@ export default function ConvertQueue({
         "rounded-[var(--radius-xl)]",
         "border border-[var(--border)]",
         "bg-[var(--surface)]",
-        "shadow-[0_8px_30px_rgba(0,0,0,0.04)]",
+        "shadow-[0_12px_40px_rgba(0,0,0,0.08)]",
       ].join(" ")}
       aria-label="Conversion queue"
     >
@@ -396,8 +396,8 @@ export default function ConvertQueue({
             <div
               className={[
                 "rounded-2xl",
-                "border border-[var(--brand)]/20",
-                "bg-[var(--brand)]/5",
+                "border border-[var(--brand)]/25",
+                "bg-[var(--brand)]/8",
                 "px-3.5 py-3",
                 "shadow-sm",
               ].join(" ")}
@@ -409,8 +409,8 @@ export default function ConvertQueue({
                       "mt-0.5 flex h-7 w-7 shrink-0",
                       "items-center justify-center",
                       "rounded-lg",
-                      "bg-[var(--brand)]/10",
-                      "text-xs font-bold text-[var(--brand)]",
+                      "bg-[var(--brand)]/15",
+                      "text-xs font-bold text-[var(--brand-hover)]",
                     ].join(" ")}
                     aria-hidden="true"
                   >

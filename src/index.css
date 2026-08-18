@@ -155,97 +155,98 @@ html.dark {
   /* -------------------------------------------------------
      Brand
   ------------------------------------------------------- */
-  --brand: #818cf8;
+  --brand: #8b8cf8;
   --brand-hover: #a5b4fc;
-  --brand-light: rgba(99, 102, 241, 0.15);
-  --brand-ring: rgba(129, 140, 248, 0.3);
+  --brand-light: rgba(139, 140, 248, 0.14);
+  --brand-ring: rgba(139, 140, 248, 0.28);
 
   /* -------------------------------------------------------
      General backgrounds
+     Layered dark blue/neutral surfaces
   ------------------------------------------------------- */
-  --background: #09090b;
-  --surface: #111113;
-  --surface-subtle: #18181b;
-  --surface-muted: #27272a;
+  --background: #0a0d12;
+  --surface: #11151c;
+  --surface-subtle: #171c25;
+  --surface-muted: #202633;
 
   /* -------------------------------------------------------
      Text
   ------------------------------------------------------- */
-  --text: #f4f4f5;
-  --text-secondary: #d4d4d8;
-  --text-muted: #a1a1aa;
-  --text-disabled: #71717a;
+  --text: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-disabled: #64748b;
 
   /* -------------------------------------------------------
      Borders
   ------------------------------------------------------- */
-  --border: #27272a;
-  --border-strong: #3f3f46;
+  --border: #252c38;
+  --border-strong: #354052;
 
   /* -------------------------------------------------------
      Status
   ------------------------------------------------------- */
   --success: #4ade80;
-  --success-bg: rgba(34, 197, 94, 0.12);
+  --success-bg: rgba(74, 222, 128, 0.12);
 
   --warning: #fbbf24;
-  --warning-bg: rgba(245, 158, 11, 0.12);
+  --warning-bg: rgba(251, 191, 36, 0.12);
 
-  --error: #f87171;
-  --error-bg: rgba(239, 68, 68, 0.12);
+  --error: #fb7185;
+  --error-bg: rgba(251, 113, 133, 0.12);
 
   --info: #60a5fa;
-  --info-bg: rgba(59, 130, 246, 0.12);
+  --info-bg: rgba(96, 165, 250, 0.12);
 
   /* -------------------------------------------------------
      Code
   ------------------------------------------------------- */
-  --code-background: #18181b;
+  --code-background: #171c25;
 
   /* -------------------------------------------------------
      Create Editor
   ------------------------------------------------------- */
-  --editor-header: #111318;
-  --editor-panel: #15171d;
-  --editor-panel-alt: #111318;
-  --editor-workspace: #0c0e13;
-  --editor-grid: rgba(255, 255, 255, 0.025);
+  --editor-header: #11151c;
+  --editor-panel: #141923;
+  --editor-panel-alt: #10141b;
+  --editor-workspace: #0b0f15;
+  --editor-grid: rgba(255, 255, 255, 0.028);
   --editor-grid-size: 24px;
-  --editor-shadow: rgba(0, 0, 0, 0.35);
+  --editor-shadow: rgba(0, 0, 0, 0.4);
 
   /* -------------------------------------------------------
      Create Toolbar
   ------------------------------------------------------- */
-  --toolbar-icon: #a1a1aa;
-  --toolbar-icon-hover: #ffffff;
+  --toolbar-icon: #94a3b8;
+  --toolbar-icon-hover: #f8fafc;
   --toolbar-hover: rgba(255, 255, 255, 0.06);
-  --toolbar-active: #6366f1;
+  --toolbar-active: #8b8cf8;
   --toolbar-active-text: #ffffff;
 
   /* -------------------------------------------------------
      Tooltip
   ------------------------------------------------------- */
-  --tooltip-background: #1b1e26;
-  --tooltip-border: #3f3f46;
-  --tooltip-text: #ffffff;
+  --tooltip-background: #181d27;
+  --tooltip-border: #354052;
+  --tooltip-text: #f8fafc;
 
   /* -------------------------------------------------------
      Canvas
   ------------------------------------------------------- */
-  --canvas-background: #18181b;
-  --canvas-border: #3f3f46;
+  --canvas-background: #171c25;
+  --canvas-border: #354052;
 
   /* -------------------------------------------------------
      Shadows
   ------------------------------------------------------- */
   --shadow-sm:
-    0 1px 2px rgba(0, 0, 0, 0.3);
+    0 1px 2px rgba(0, 0, 0, 0.35);
 
   --shadow-md:
-    0 4px 12px rgba(0, 0, 0, 0.35);
+    0 4px 14px rgba(0, 0, 0, 0.4);
 
   --shadow-lg:
-    0 10px 25px rgba(0, 0, 0, 0.45);
+    0 12px 30px rgba(0, 0, 0, 0.5);
 }
 
 /* =========================================================

@@ -119,10 +119,10 @@ export default function ConvertQueueItem({
         "transition-all duration-200",
         selected
           ? [
-              "border-[var(--brand)]/40",
-              "bg-[var(--brand)]/4",
-              "shadow-[0_4px_20px_rgba(0,0,0,0.04)]",
-              "ring-1 ring-[var(--brand)]/10",
+              "border-[var(--brand)]/45",
+              "bg-[var(--brand)]/8",
+              "shadow-[0_6px_24px_rgba(0,0,0,0.16)]",
+              "ring-1 ring-[var(--brand)]/15",
             ].join(" ")
           : [
               "border-[var(--border)]",
@@ -308,9 +308,9 @@ export default function ConvertQueueItem({
                     aria-hidden="true"
                   />
 
-                  <span className="hidden xs:inline">{status.label}</span>
+                  <span className="sm:hidden">{status.label}</span>
 
-                  <span className="xs:hidden">
+                  <span className="sm:hidden">
                     {item.status === "success"
                       ? "Done"
                       : item.status === "error"
