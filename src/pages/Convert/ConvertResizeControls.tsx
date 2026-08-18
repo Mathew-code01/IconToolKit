@@ -115,7 +115,7 @@ export default function ConvertResizeControls({
               className="accent-[var(--brand)]"
             />
 
-            <span className="text-[11px] text-[var(--text-muted)]">
+            <span className="text-[11px] font-medium text-[var(--text-secondary)]">
               Keep aspect ratio
             </span>
           </label>

@@ -23,9 +23,7 @@ interface ConvertSettingsProps {
 
   settings: ConvertSettingsState;
 
-  onChange: (
-    patch: Partial<ConvertSettingsState>,
-  ) => void;
+  onChange: (patch: Partial<ConvertSettingsState>) => void;
 
   onReset: () => void;
 }
@@ -38,35 +36,18 @@ export default function ConvertSettings({
 }: ConvertSettingsProps) {
   const first = files[0];
 
-  const mixedFormats =
-    new Set(
-      files.map(
-        (file) => file.sourceFormat,
-      ),
-    ).size > 1;
+  const mixedFormats = new Set(files.map((file) => file.sourceFormat)).size > 1;
 
-  const recommendedFormats = files.map(
-    (file) =>
-      getRecommendedOutputFormat(
-        file.sourceFormat,
-      ),
+  const recommendedFormats = files.map((file) =>
+    getRecommendedOutputFormat(file.sourceFormat),
   );
 
-  const uniqueRecommendations =
-    Array.from(
-      new Set(
-        recommendedFormats.filter(
-          Boolean,
-        ) as ConvertFormat[],
-      ),
-    );
+  const uniqueRecommendations = Array.from(
+    new Set(recommendedFormats.filter(Boolean) as ConvertFormat[]),
+  );
 
   const incompatibleCount = files.filter(
-    (file) =>
-      !canConvert(
-        file.sourceFormat,
-        settings.outputFormat,
-      ),
+    (file) => !canConvert(file.sourceFormat, settings.outputFormat),
   ).length;
 
   const modeDescription =
@@ -86,8 +67,7 @@ export default function ConvertSettings({
             </h3>
 
             <p className="mt-1 text-[11px] leading-5 text-[var(--text-muted)]">
-              Choose how your selected files should be
-              converted.
+              Choose how your selected files should be converted.
             </p>
           </div>
 
@@ -103,10 +83,7 @@ export default function ConvertSettings({
         {files.length > 0 ? (
           <div className="mt-4 flex flex-wrap gap-1.5">
             <span className="rounded-full border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1 text-[9px] font-semibold text-[var(--text-muted)]">
-              {files.length}{" "}
-              {files.length === 1
-                ? "file"
-                : "files"}
+              {files.length} {files.length === 1 ? "file" : "files"}
             </span>
 
             {mixedFormats ? (
@@ -127,17 +104,14 @@ export default function ConvertSettings({
                 Conversion mode
               </p>
 
-              <p className="mt-1 text-[10px] leading-4 text-[var(--text-muted)]">
+              <p className="mt-1 text-[10px] leading-[1.55] text-[var(--text-secondary)]">
                 {modeDescription}
               </p>
             </div>
 
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <ModeButton
-                active={
-                  settings.outputMode ===
-                  "smart"
-                }
+                active={settings.outputMode === "smart"}
                 title="Smart"
                 description="Best format per file"
                 icon="✦"
@@ -149,10 +123,7 @@ export default function ConvertSettings({
               />
 
               <ModeButton
-                active={
-                  settings.outputMode ===
-                  "single"
-                }
+                active={settings.outputMode === "single"}
                 title="Same format"
                 description="One format for selection"
                 icon="↗"
@@ -164,17 +135,13 @@ export default function ConvertSettings({
               />
 
               <ModeButton
-                active={
-                  settings.outputMode ===
-                  "individual"
-                }
+                active={settings.outputMode === "individual"}
                 title="Individual"
                 description="Control each file"
                 icon="☷"
                 onClick={() =>
                   onChange({
-                    outputMode:
-                      "individual",
+                    outputMode: "individual",
                   })
                 }
               />
@@ -183,8 +150,7 @@ export default function ConvertSettings({
         ) : null}
 
         {/* Smart summary */}
-        {settings.outputMode ===
-        "smart" ? (
+        {settings.outputMode === "smart" ? (
           <div className="rounded-xl border border-[var(--brand)]/20 bg-[var(--brand)]/5 p-3.5">
             <div className="flex gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--brand)]/10 text-sm text-[var(--brand)]">
@@ -196,29 +162,21 @@ export default function ConvertSettings({
                   Smart conversion is active
                 </p>
 
-                <p className="mt-1 text-[10px] leading-4 text-[var(--text-muted)]">
-                  We will avoid unsupported conversions
-                  and choose a sensible output for each
-                  file.
+                <p className="mt-1 text-[10px] leading-[1.55] text-[var(--text-secondary)]">
+                  We will avoid unsupported conversions and choose a sensible
+                  output for each file.
                 </p>
 
-                {uniqueRecommendations.length >
-                0 ? (
+                {uniqueRecommendations.length > 0 ? (
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    {uniqueRecommendations.map(
-                      (format) => (
-                        <span
-                          key={format}
-                          className="rounded-md bg-[var(--surface)] px-2 py-1 text-[9px] font-semibold text-[var(--text-muted)]"
-                        >
-                          →
-                          {" "}
-                          {FORMAT_LABELS[
-                            format
-                          ]}
-                        </span>
-                      ),
-                    )}
+                    {uniqueRecommendations.map((format) => (
+                      <span
+                        key={format}
+                        className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[9px] font-semibold text-[var(--text-secondary)]"
+                      >
+                        → {FORMAT_LABELS[format]}
+                      </span>
+                    ))}
                   </div>
                 ) : null}
               </div>
@@ -227,8 +185,7 @@ export default function ConvertSettings({
         ) : null}
 
         {/* Manual output selector */}
-        {settings.outputMode !==
-        "smart" ? (
+        {settings.outputMode !== "smart" ? (
           <ConvertFormatSelector
             files={files}
             value={settings.outputFormat}
@@ -241,54 +198,34 @@ export default function ConvertSettings({
         ) : null}
 
         {/* Compatibility warning */}
-        {settings.outputMode !==
-          "smart" &&
-        incompatibleCount > 0 ? (
+        {settings.outputMode !== "smart" && incompatibleCount > 0 ? (
           <div className="rounded-xl border border-amber-300/60 bg-amber-50/50 p-3 dark:border-amber-800/50 dark:bg-amber-950/20">
             <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400">
               {incompatibleCount}{" "}
-              {incompatibleCount === 1
-                ? "file is"
-                : "files are"}{" "}
-              not compatible with{" "}
-              {FORMAT_LABELS[
-                settings.outputFormat
-              ]}
-              .
+              {incompatibleCount === 1 ? "file is" : "files are"} not compatible
+              with {FORMAT_LABELS[settings.outputFormat]}.
             </p>
 
             <p className="mt-1 text-[9px] leading-4 text-[var(--text-muted)]">
-              Those files should be excluded from this
-              conversion. They will not be sent to an
-              unsupported converter.
+              Those files should be excluded from this conversion. They will not
+              be sent to an unsupported converter.
             </p>
           </div>
         ) : null}
 
-        <ConvertQualityControls
-          settings={settings}
-          onChange={onChange}
-        />
+        <ConvertQualityControls settings={settings} onChange={onChange} />
 
         <ConvertResizeControls
           settings={settings}
-          originalWidth={
-            first?.width ?? null
-          }
-          originalHeight={
-            first?.height ?? null
-          }
+          originalWidth={first?.width ?? null}
+          originalHeight={first?.height ?? null}
           onChange={onChange}
         />
 
-        <ConvertBackgroundControls
-          settings={settings}
-          onChange={onChange}
-        />
+        <ConvertBackgroundControls settings={settings} onChange={onChange} />
 
         {/* ICO */}
-        {settings.outputFormat ===
-        "ico" ? (
+        {settings.outputFormat === "ico" ? (
           <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
             <p className="text-xs font-semibold text-[var(--text)]">
               ICO sizes
@@ -299,57 +236,39 @@ export default function ConvertSettings({
             </p>
 
             <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-7">
-              {[16, 24, 32, 48, 64, 128, 256].map(
-                (size) => {
-                  const selected =
-                    settings.icoSizes.includes(
-                      size,
-                    );
+              {[16, 24, 32, 48, 64, 128, 256].map((size) => {
+                const selected = settings.icoSizes.includes(size);
 
-                  return (
-                    <button
-                      key={size}
-                      type="button"
-                      onClick={() => {
-                        const next =
-                          selected
-                            ? settings.icoSizes.filter(
-                                (item) =>
-                                  item !==
-                                  size,
-                              )
-                            : [
-                                ...settings.icoSizes,
-                                size,
-                              ];
+                return (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => {
+                      const next = selected
+                        ? settings.icoSizes.filter((item) => item !== size)
+                        : [...settings.icoSizes, size];
 
-                        onChange({
-                          icoSizes:
-                            next.sort(
-                              (a, b) =>
-                                a - b,
-                            ),
-                        });
-                      }}
-                      className={[
-                        "rounded-lg border px-2 py-2 text-[10px] font-medium transition",
-                        selected
-                          ? "border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--brand)]"
-                          : "border-[var(--border)] text-[var(--text-muted)] hover:bg-[var(--surface-muted)]",
-                      ].join(" ")}
-                    >
-                      {size}
-                    </button>
-                  );
-                },
-              )}
+                      onChange({
+                        icoSizes: next.sort((a, b) => a - b),
+                      });
+                    }}
+                    className={[
+                      "rounded-lg border px-2 py-2 text-[10px] font-medium transition",
+                      selected
+                        ? "border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--brand)]"
+                        : "border-[var(--border)] text-[var(--text-muted)] hover:bg-[var(--surface-muted)]",
+                    ].join(" ")}
+                  >
+                    {size}
+                  </button>
+                );
+              })}
             </div>
           </div>
         ) : null}
 
         {/* PDF */}
-        {settings.outputFormat ===
-        "pdf" ? (
+        {settings.outputFormat === "pdf" ? (
           <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
             <div className="mb-3">
               <p className="text-xs font-semibold text-[var(--text)]">
@@ -363,66 +282,48 @@ export default function ConvertSettings({
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <label className="mb-2 block text-[10px] font-medium text-[var(--text-muted)]">
+                <label className="mb-2 block text-[10px] font-medium text-[var(--text-secondary)]">
                   Page size
                 </label>
 
                 <select
-                  value={
-                    settings.pdfPageSize
-                  }
+                  value={settings.pdfPageSize}
                   onChange={(event) =>
                     onChange({
-                      pdfPageSize:
-                        event.target
-                          .value as ConvertSettingsState["pdfPageSize"],
+                      pdfPageSize: event.target
+                        .value as ConvertSettingsState["pdfPageSize"],
                     })
                   }
                   className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-subtle)] px-2 text-xs text-[var(--text)]"
                 >
-                  <option value="auto">
-                    Auto
-                  </option>
+                  <option value="auto">Auto</option>
 
-                  <option value="a4">
-                    A4
-                  </option>
+                  <option value="a4">A4</option>
 
-                  <option value="letter">
-                    Letter
-                  </option>
+                  <option value="letter">Letter</option>
 
-                  <option value="square">
-                    Square
-                  </option>
+                  <option value="square">Square</option>
                 </select>
               </div>
 
               <div>
-                <label className="mb-2 block text-[10px] font-medium text-[var(--text-muted)]">
+                <label className="mb-2 block text-[10px] font-medium text-[var(--text-secondary)]">
                   Orientation
                 </label>
 
                 <select
-                  value={
-                    settings.pdfOrientation
-                  }
+                  value={settings.pdfOrientation}
                   onChange={(event) =>
                     onChange({
-                      pdfOrientation:
-                        event.target
-                          .value as ConvertSettingsState["pdfOrientation"],
+                      pdfOrientation: event.target
+                        .value as ConvertSettingsState["pdfOrientation"],
                     })
                   }
                   className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-subtle)] px-2 text-xs text-[var(--text)]"
                 >
-                  <option value="portrait">
-                    Portrait
-                  </option>
+                  <option value="portrait">Portrait</option>
 
-                  <option value="landscape">
-                    Landscape
-                  </option>
+                  <option value="landscape">Landscape</option>
                 </select>
               </div>
             </div>
@@ -452,12 +353,7 @@ export default function ConvertSettings({
                   onChange({
                     dpi: Math.max(
                       72,
-                      Math.min(
-                        1200,
-                        Number(
-                          event.target.value,
-                        ) || 72,
-                      ),
+                      Math.min(1200, Number(event.target.value) || 72),
                     ),
                   })
                 }
@@ -475,8 +371,7 @@ export default function ConvertSettings({
                 value={settings.suffix}
                 onChange={(event) =>
                   onChange({
-                    suffix:
-                      event.target.value,
+                    suffix: event.target.value,
                   })
                 }
                 placeholder="-converted"
@@ -491,37 +386,27 @@ export default function ConvertSettings({
           <label className="flex cursor-pointer items-center gap-2">
             <input
               type="checkbox"
-              checked={
-                settings.fileNameMode ===
-                "custom"
-              }
+              checked={settings.fileNameMode === "custom"}
               onChange={(event) =>
                 onChange({
-                  fileNameMode:
-                    event.target.checked
-                      ? "custom"
-                      : "original",
+                  fileNameMode: event.target.checked ? "custom" : "original",
                 })
               }
               className="accent-[var(--brand)]"
             />
 
-            <span className="text-[11px] text-[var(--text-muted)]">
+            <span className="text-[11px] font-medium text-[var(--text-secondary)]">
               Use custom output filename
             </span>
           </label>
 
-          {settings.fileNameMode ===
-          "custom" ? (
+          {settings.fileNameMode === "custom" ? (
             <input
               type="text"
-              value={
-                settings.customFileName
-              }
+              value={settings.customFileName}
               onChange={(event) =>
                 onChange({
-                  customFileName:
-                    event.target.value,
+                  customFileName: event.target.value,
                 })
               }
               placeholder="converted-file"
@@ -553,19 +438,20 @@ function ModeButton({
       onClick={onClick}
       aria-pressed={active}
       className={[
-        "rounded-xl border p-3 text-left transition",
+        "group rounded-xl border p-3 text-left transition-all duration-200",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]/30",
         active
-          ? "border-[var(--brand)] bg-[var(--brand)]/5 shadow-sm"
+          ? "border-[var(--brand)]/50 bg-[var(--brand)]/[0.08] shadow-sm"
           : "border-[var(--border)] bg-[var(--surface)] hover:border-[var(--brand)]/30 hover:bg-[var(--surface-muted)]",
       ].join(" ")}
     >
       <div className="flex items-start gap-2.5">
         <span
           className={[
-            "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs",
+            "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-xs transition",
             active
-              ? "bg-[var(--brand)]/10 text-[var(--brand)]"
-              : "bg-[var(--surface-muted)] text-[var(--text-muted)]",
+              ? "border-[var(--brand)]/20 bg-[var(--brand)]/10 text-[var(--brand)]"
+              : "border-[var(--border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] group-hover:text-[var(--text)]",
           ].join(" ")}
         >
           {icon}
@@ -574,16 +460,14 @@ function ModeButton({
         <span className="min-w-0">
           <span
             className={[
-              "block text-[10px] font-bold",
-              active
-                ? "text-[var(--brand)]"
-                : "text-[var(--text)]",
+              "block text-[10px] font-bold leading-4",
+              active ? "text-[var(--brand)]" : "text-[var(--text)]",
             ].join(" ")}
           >
             {title}
           </span>
 
-          <span className="mt-1 block text-[9px] leading-4 text-[var(--text-muted)]">
+          <span className="mt-1 block text-[9px] leading-[1.5] text-[var(--text-secondary)]">
             {description}
           </span>
         </span>

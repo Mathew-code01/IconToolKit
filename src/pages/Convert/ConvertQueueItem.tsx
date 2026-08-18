@@ -127,9 +127,9 @@ export default function ConvertQueueItem({
           : [
               "border-[var(--border)]",
               "bg-[var(--surface)]",
-              "hover:border-[var(--brand)]/25",
+              "hover:border-[var(--brand)]/30",
               "hover:bg-[var(--surface-subtle)]",
-              "hover:shadow-sm",
+              "hover:shadow-[0_6px_20px_rgba(0,0,0,0.12)]",
             ].join(" "),
       ].join(" ")}
     >
@@ -308,7 +308,7 @@ export default function ConvertQueueItem({
                     aria-hidden="true"
                   />
 
-                  <span className="sm:hidden">{status.label}</span>
+                  <span className="hidden sm:inline">{status.label}</span>
 
                   <span className="sm:hidden">
                     {item.status === "success"
