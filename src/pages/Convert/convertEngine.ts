@@ -45,6 +45,42 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 
 const PDF_WASM_URL = "/pdfjs/wasm/";
 
+/**
+ * PDF preview rendering is intentionally separated from
+ * conversion rendering.
+ *
+ * Conversion should preserve every page at the best practical
+ * quality, while the UI preview should stay lightweight enough
+ * for large PDFs.
+ */
+const PDF_PREVIEW_MAX_WIDTH = 900;
+
+/**
+ * Maximum number of pages that will be placed into the visual
+ * preview sheet.
+ *
+ * The actual conversion is NOT limited by this value.
+ *
+ * This only protects the browser UI from creating a gigantic
+ * preview image for very large PDFs.
+ */
+const PDF_PREVIEW_MAX_PAGES = 50;
+
+/**
+ * Space between rendered pages in the preview sheet.
+ */
+const PDF_PREVIEW_PAGE_GAP = 24;
+
+/**
+ * Outer padding around the preview sheet.
+ */
+const PDF_PREVIEW_PADDING = 24;
+
+/**
+ * Background used between PDF pages.
+ */
+const PDF_PREVIEW_BACKGROUND = "#e5e7eb";
+
 export interface ConversionProgress {
   progress: number;
   stage?: string;
@@ -76,6 +112,19 @@ export interface ConversionPreviewResult {
   size: number;
 
   previewUrl: string | null;
+
+  /**
+   * Number of pages represented by the preview.
+   *
+   * For normal images this is 1.
+   * For multi-page PDF previews this is the PDF page count.
+   */
+  pageCount?: number;
+
+  /**
+   * True when the preview represents multiple pages.
+   */
+  isMultiPage?: boolean;
 
   fileName: string;
 }
@@ -1168,95 +1217,464 @@ async function createIco(
 async function renderPdfPages(
   file: File,
   signal?: AbortSignal,
-  onProgress?: (
-    progress: ConversionProgress,
-  ) => void,
+  onProgress?: (progress: ConversionProgress) => void,
+  options?: {
+    maxPages?: number;
+    scale?: number;
+  },
 ): Promise<HTMLCanvasElement[]> {
   throwIfAborted(signal);
 
-  const data =
-    new Uint8Array(
-      await file.arrayBuffer(),
-    );
+  const data = new Uint8Array(await file.arrayBuffer());
 
   throwIfAborted(signal);
 
-  const loadingTask =
-    pdfjsLib.getDocument({
-      data,
-      wasmUrl: PDF_WASM_URL,
-    });
+  const loadingTask = pdfjsLib.getDocument({
+    data,
+    wasmUrl: PDF_WASM_URL,
+  });
+
+  let abortHandler: (() => void) | null = null;
 
   if (signal) {
-    signal.addEventListener(
-      "abort",
-      () => {
-        void loadingTask.destroy();
-      },
-      { once: true },
+    abortHandler = () => {
+      void loadingTask.destroy();
+    };
+
+    signal.addEventListener("abort", abortHandler, { once: true });
+  }
+
+  try {
+    const pdf = await loadingTask.promise;
+
+    const maxPages = options?.maxPages ?? pdf.numPages;
+
+    const pageCount = Math.min(pdf.numPages, Math.max(1, maxPages));
+
+    const scale = options?.scale ?? 2;
+
+    const pages: HTMLCanvasElement[] = [];
+
+    for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+      throwIfAborted(signal);
+
+      const page = await pdf.getPage(pageNumber);
+
+      let viewport = page.getViewport({
+        scale,
+      });
+
+      /*
+       * Protect preview rendering from enormous PDF pages.
+       *
+       * The normal conversion path can still use its
+       * requested scale. This limit is mainly useful when
+       * previewing PDFs with unusually large page sizes.
+       */
+      if (viewport.width > 4000) {
+        const safeScale = scale * (4000 / viewport.width);
+
+        viewport = page.getViewport({
+          scale: safeScale,
+        });
+      }
+
+      const canvas = createCanvas(viewport.width, viewport.height);
+
+      const context = canvas.getContext("2d", {
+        alpha: false,
+      });
+
+      if (!context) {
+        throw new Error("Could not create PDF render canvas.");
+      }
+
+      context.fillStyle = "#ffffff";
+
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      await page.render({
+        canvasContext: context,
+        canvas,
+        viewport,
+      }).promise;
+
+      pages.push(canvas);
+
+      onProgress?.({
+        progress: 10 + Math.round((pageNumber / pdf.numPages) * 80),
+
+        stage: `Rendering PDF page ${pageNumber} of ${pdf.numPages}`,
+      });
+
+      /*
+       * Explicitly release the page proxy before
+       * continuing to the next page.
+       */
+      page.cleanup?.();
+    }
+
+    /*
+     * If the preview was intentionally limited, make that
+     * clear in the progress stage rather than silently
+     * pretending the PDF contains fewer pages.
+     */
+    if (pageCount < pdf.numPages) {
+      onProgress?.({
+        progress: 90,
+        stage: `Preview limited to ${pageCount} of ${pdf.numPages} pages`,
+      });
+    }
+
+    return pages;
+  } finally {
+    if (signal && abortHandler) {
+      signal.removeEventListener("abort", abortHandler);
+    }
+
+    /*
+     * PDF.js requires the loading task to be destroyed
+     * after the document is no longer needed.
+     */
+    try {
+      await loadingTask.destroy();
+    } catch {
+      /*
+       * Ignore cleanup errors. The original rendering
+       * error/abort should remain the useful error.
+       */
+    }
+  }
+}
+
+/**
+ * Creates one visual preview image containing multiple PDF pages.
+ *
+ * Why a single image?
+ *
+ * The existing ConvertPreview component already understands
+ * previewUrl. By composing the pages into one PNG we can support
+ * multi-page PDF previews without forcing the rest of the
+ * conversion UI to understand PDF.js.
+ */
+async function createPdfPreviewSheet(
+  pages: HTMLCanvasElement[],
+  signal?: AbortSignal,
+): Promise<{
+  blob: Blob;
+  width: number;
+  height: number;
+}> {
+  throwIfAborted(signal);
+
+  if (!pages.length) {
+    throw new Error(
+      "There are no PDF pages available for preview.",
     );
   }
 
-  const pdf =
-    await loadingTask.promise;
+  /*
+   * Calculate a common preview width.
+   *
+   * Keeping all pages within the same visual column produces
+   * a much cleaner document-preview experience.
+   */
+  const targetWidth = Math.min(
+    PDF_PREVIEW_MAX_WIDTH,
+    Math.max(
+      320,
+      Math.max(
+        ...pages.map(
+          (page) => page.width,
+        ),
+      ),
+    ),
+  );
 
-  const pages: HTMLCanvasElement[] = [];
+  const scaledPages = pages.map(
+    (page) => {
+      const scale =
+        targetWidth /
+        page.width;
+
+      return {
+        source: page,
+
+        width: Math.max(
+          1,
+          Math.round(
+            page.width * scale,
+          ),
+        ),
+
+        height: Math.max(
+          1,
+          Math.round(
+            page.height * scale,
+          ),
+        ),
+      };
+    },
+  );
+
+  const sheetWidth =
+    targetWidth +
+    PDF_PREVIEW_PADDING * 2;
+
+  const sheetHeight =
+    PDF_PREVIEW_PADDING * 2 +
+    scaledPages.reduce(
+      (total, page) =>
+        total + page.height,
+      0,
+    ) +
+    PDF_PREVIEW_PAGE_GAP *
+      Math.max(
+        0,
+        scaledPages.length - 1,
+      );
+
+  /*
+   * Avoid creating an invalid/unsafe canvas.
+   */
+  checkCanvasSize(
+    sheetWidth,
+    sheetHeight,
+  );
+
+  const sheet = createCanvas(
+    sheetWidth,
+    sheetHeight,
+  );
+
+  const context =
+    sheet.getContext("2d", {
+      alpha: false,
+    });
+
+  if (!context) {
+    throw new Error(
+      "Could not create PDF preview canvas.",
+    );
+  }
+
+  /*
+   * Professional neutral document-preview background.
+   */
+  context.fillStyle =
+    PDF_PREVIEW_BACKGROUND;
+
+  context.fillRect(
+    0,
+    0,
+    sheet.width,
+    sheet.height,
+  );
+
+  context.imageSmoothingEnabled =
+    true;
+
+  context.imageSmoothingQuality =
+    "high";
+
+  let currentY =
+    PDF_PREVIEW_PADDING;
 
   for (
-    let pageNumber = 1;
-    pageNumber <= pdf.numPages;
-    pageNumber += 1
+    let index = 0;
+    index < scaledPages.length;
+    index += 1
   ) {
     throwIfAborted(signal);
 
     const page =
-      await pdf.getPage(
-        pageNumber,
+      scaledPages[index];
+
+    const x =
+      Math.round(
+        (sheetWidth -
+          page.width) /
+          2,
       );
 
-    const viewport =
-      page.getViewport({
-        scale: 2,
-      });
+    /*
+     * Subtle document shadow.
+     *
+     * This is intentionally done directly on the
+     * canvas so the resulting preview remains a
+     * normal image URL.
+     */
+    context.save();
 
-    const canvas =
-      createCanvas(
-        viewport.width,
-        viewport.height,
-      );
+    context.shadowColor =
+      "rgba(15, 23, 42, 0.14)";
 
-    const context =
-      canvas.getContext("2d");
+    context.shadowBlur = 18;
 
-    if (!context) {
-      throw new Error(
-        "Could not create PDF render canvas.",
-      );
+    context.shadowOffsetY = 5;
+
+    context.fillStyle =
+      "#ffffff";
+
+    context.fillRect(
+      x,
+      currentY,
+      page.width,
+      page.height,
+    );
+
+    context.restore();
+
+    /*
+     * Draw the actual PDF page.
+     */
+    context.drawImage(
+      page.source,
+      x,
+      currentY,
+      page.width,
+      page.height,
+    );
+
+    currentY +=
+      page.height;
+
+    if (
+      index <
+      scaledPages.length - 1
+    ) {
+      currentY +=
+        PDF_PREVIEW_PAGE_GAP;
     }
-
-    await page.render({
-      canvasContext: context,
-      canvas,
-      viewport,
-    }).promise;
-
-    pages.push(canvas);
-
-    onProgress?.({
-      progress:
-        10 +
-        Math.round(
-          (pageNumber /
-            pdf.numPages) *
-            80,
-        ),
-      stage: `Rendering PDF page ${pageNumber} of ${pdf.numPages}`,
-    });
   }
 
-  await loadingTask.destroy();
+  const blob =
+    await new Promise<Blob>(
+      (resolve, reject) => {
+        sheet.toBlob(
+          (result) => {
+            if (!result) {
+              reject(
+                new Error(
+                  "Could not encode the PDF preview.",
+                ),
+              );
 
-  return pages;
+              return;
+            }
+
+            resolve(result);
+          },
+          "image/png",
+          1,
+        );
+      },
+    );
+
+  return {
+    blob,
+
+    width: sheet.width,
+
+    height: sheet.height,
+  };
+}
+
+/**
+ * Renders a PDF into a browser-friendly preview image.
+ *
+ * The returned image contains every previewable page.
+ *
+ * Large PDFs are intentionally capped for the visual preview,
+ * while conversion itself remains uncapped.
+ */
+async function createPdfVisualPreview(
+  file: File,
+  signal?: AbortSignal,
+): Promise<{
+  previewUrl: string;
+  width: number;
+  height: number;
+  pageCount: number;
+  previewedPageCount: number;
+}> {
+  throwIfAborted(signal);
+
+  /*
+   * Render at a lower scale than final conversion.
+   * This keeps preview generation fast and memory-safe.
+   */
+  const pages =
+    await renderPdfPages(
+      file,
+      signal,
+      undefined,
+      {
+        maxPages:
+          PDF_PREVIEW_MAX_PAGES,
+
+        scale: 1.25,
+      },
+    );
+
+  throwIfAborted(signal);
+
+  if (!pages.length) {
+    throw new Error(
+      "The PDF contains no renderable pages.",
+    );
+  }
+
+  const preview =
+    await createPdfPreviewSheet(
+      pages,
+      signal,
+    );
+
+  throwIfAborted(signal);
+
+  const pdfData =
+    new Uint8Array(
+      await file.arrayBuffer(),
+    );
+
+  const loadingTask =
+    pdfjsLib.getDocument({
+      data: pdfData,
+      wasmUrl: PDF_WASM_URL,
+    });
+
+  let pageCount: number;
+
+  try {
+    const pdf = await loadingTask.promise;
+
+    pageCount = pdf.numPages;
+  } finally {
+    try {
+      await loadingTask.destroy();
+    } catch {
+      // Ignore cleanup errors.
+    }
+  }
+
+  return {
+    previewUrl:
+      URL.createObjectURL(
+        preview.blob,
+      ),
+
+    width:
+      preview.width,
+
+    height:
+      preview.height,
+
+    pageCount,
+
+    previewedPageCount:
+      pages.length,
+  };
 }
 
 async function createMultiPagePdf(
@@ -1445,7 +1863,27 @@ async function convertPdfToImages(
   signal?: AbortSignal,
   onProgress?: (progress: ConversionProgress) => void,
 ): Promise<PdfImageConversionResult> {
-  const pages = await renderPdfPages(file, signal, onProgress);
+  onProgress?.({
+    progress: 5,
+    stage: "Opening PDF",
+  });
+
+  const pages =
+    await renderPdfPages(
+      file,
+      signal,
+      onProgress,
+      {
+        /*
+         * IMPORTANT:
+         * No maxPages here.
+         *
+         * Actual conversion must process
+         * the entire PDF.
+         */
+        scale: 2,
+      },
+    );
 
   if (!pages.length) {
     throw new Error("The PDF contains no renderable pages.");
@@ -1674,47 +2112,119 @@ async function previewPdfConversion(
 ): Promise<ConversionPreviewResult> {
   throwIfAborted(signal);
 
+  /*
+   * PDF → PDF
+   *
+   * The previous implementation returned item.previewUrl,
+   * which points to the original PDF file.
+   *
+   * That is not safe for an image-based preview component
+   * because <img> cannot display application/pdf.
+   *
+   * Instead, render the PDF pages into a professional
+   * multi-page PNG preview sheet.
+   */
   if (settings.outputFormat === "pdf") {
+    const visualPreview = await createPdfVisualPreview(item.file, signal);
+
+    throwIfAborted(signal);
+
     return {
       blob: item.file,
 
-      width: null,
-      height: null,
+      width: visualPreview.width,
+
+      height: visualPreview.height,
 
       size: item.file.size,
 
-      previewUrl: item.previewUrl,
+      previewUrl: visualPreview.previewUrl,
+
+      pageCount: visualPreview.pageCount,
+
+      isMultiPage: visualPreview.pageCount > 1,
 
       fileName: makeOutputName(item.file, settings.outputFormat, settings),
     };
   }
 
-  const pages = await renderPdfPages(item.file, signal);
+  /*
+   * PDF → image format
+   *
+   * The actual conversion still creates every page.
+   *
+   * The preview now renders every page rather than:
+   *
+   *   const firstPage = pages[0]
+   *
+   * which was the reason only page 1 was visible.
+   */
+  const pages = await renderPdfPages(item.file, signal, undefined, {
+    /*
+     * Preview all normal PDFs. For very large PDFs,
+     * cap the UI preview to avoid an enormous canvas.
+     *
+     * Conversion itself remains unlimited.
+     */
+    maxPages: PDF_PREVIEW_MAX_PAGES,
+
+    scale: 1.25,
+  });
+
+  throwIfAborted(signal);
 
   if (!pages.length) {
     throw new Error("The PDF contains no renderable pages.");
   }
 
-  const firstPage = pages[0];
+  /*
+   * Apply the same output settings to every preview page.
+   *
+   * This makes the preview represent the actual image
+   * conversion much more accurately.
+   */
+  const previewPages: HTMLCanvasElement[] = [];
 
-  const previewCanvas = drawToCanvas(firstPage, settings);
+  for (let index = 0; index < pages.length; index += 1) {
+    throwIfAborted(signal);
 
-  const blob = await canvasToBlob(
-    previewCanvas,
+    previewPages.push(drawToCanvas(pages[index], settings));
+  }
+
+  const previewSheet = await createPdfPreviewSheet(previewPages, signal);
+
+  throwIfAborted(signal);
+
+  /*
+   * Important:
+   *
+   * The returned blob remains the actual first-page
+   * converted image for backwards compatibility with
+   * the existing preview/result architecture.
+   *
+   * The real Convert operation is still handled by
+   * convertPdfToImages(), which generates every page.
+   */
+  const firstPageOutput = await canvasToBlob(
+    previewPages[0],
     settings.outputFormat,
     settings.quality,
   );
 
   return {
-    blob,
+    blob: firstPageOutput,
 
-    width: previewCanvas.width,
+    width: previewPages[0].width,
 
-    height: previewCanvas.height,
+    height: previewPages[0].height,
 
-    size: blob.size,
+    size: firstPageOutput.size,
 
-    previewUrl: URL.createObjectURL(blob),
+    previewUrl: URL.createObjectURL(previewSheet.blob),
+
+    pageCount: pages.length,
+
+    isMultiPage: pages.length > 1,
 
     fileName: makeOutputName(item.file, settings.outputFormat, settings),
   };
@@ -1843,69 +2353,101 @@ let outputFileName: string | null = null;
   };
 }
 
-export async function getFileDimensions(
-  file: File,
-): Promise<{
+export async function getFileDimensions(file: File): Promise<{
   width: number | null;
   height: number | null;
 }> {
   try {
-    const extension =
-      getFileExtension(file);
+    const extension = getFileExtension(file);
 
-    if (
-      extension === "pdf" ||
-      file.type ===
-        "application/pdf"
-    ) {
-      const buffer =
-        new Uint8Array(
-          await file.arrayBuffer(),
-        );
+    if (extension === "pdf" || file.type === "application/pdf") {
+      const buffer = new Uint8Array(await file.arrayBuffer());
 
-      const loadingTask =
-        pdfjsLib.getDocument({
-          data: buffer,
-          wasmUrl:
-            PDF_WASM_URL,
-        });
+      const loadingTask = pdfjsLib.getDocument({
+        data: buffer,
+        wasmUrl: PDF_WASM_URL,
+      });
 
-      const pdf =
-        await loadingTask.promise;
+      try {
+        const pdf = await loadingTask.promise;
 
-      if (!pdf.numPages) {
-        await loadingTask.destroy();
+        if (!pdf.numPages) {
+          return {
+            width: null,
+            height: null,
+          };
+        }
 
-        return {
-          width: null,
-          height: null,
-        };
-      }
+        const page = await pdf.getPage(1);
 
-      const page =
-        await pdf.getPage(1);
-
-      const viewport =
-        page.getViewport({
+        const viewport = page.getViewport({
           scale: 1,
         });
 
-      await loadingTask.destroy();
+        page.cleanup?.();
+
+        return {
+          width: Math.round(viewport.width),
+          height: Math.round(viewport.height),
+        };
+      } finally {
+        try {
+          await loadingTask.destroy();
+        } catch {
+          // Ignore PDF.js cleanup errors.
+        }
+      }
+    }
+
+    if (extension === "svg" || file.type === "image/svg+xml") {
+      const decoded = await decodeSvg(file);
 
       return {
-        width: Math.round(viewport.width),
-        height: Math.round(viewport.height),
+        width: decoded.width,
+        height: decoded.height,
       };
     }
 
-    const decoded =
-      await decodeImage(file);
+    if (
+      extension === "tif" ||
+      extension === "tiff" ||
+      file.type === "image/tiff"
+    ) {
+      const decoded = await decodeTiff(file);
+
+      return {
+        width: decoded.width,
+        height: decoded.height,
+      };
+    }
+
+    if (extension === "gif" || file.type === "image/gif") {
+      const decoded = await decodeGif(file);
+
+      return {
+        width: decoded.width,
+        height: decoded.height,
+      };
+    }
+
+    if (
+      extension === "ico" ||
+      file.type === "image/x-icon" ||
+      file.type === "image/vnd.microsoft.icon"
+    ) {
+      const decoded = await decodeIcoImage(file);
+
+      return {
+        width: decoded.width,
+        height: decoded.height,
+      };
+    }
+
+    const image = await loadImage(file);
 
     return {
-      width:
-        decoded.width,
-      height:
-        decoded.height,
+      width: image.naturalWidth || null,
+      height: image.naturalHeight || null,
     };
   } catch {
     return {
@@ -1925,45 +2467,25 @@ export async function createSourcePreview(
     const format = getFileExtension(file);
 
     if (format === "pdf" || file.type === "application/pdf") {
-      const pages = await renderPdfPages(file, signal);
+      const pages = await renderPdfPages(file, signal, undefined, {
+        /*
+         * Queue thumbnails only need a few pages.
+         * The main preview handles the larger preview.
+         */
+        maxPages: 4,
+
+        scale: 0.8,
+      });
 
       if (!pages.length) {
         return null;
       }
 
-      const firstPage = pages[0];
+      const preview = await createPdfPreviewSheet(pages, signal);
 
-      const thumbnail = document.createElement("canvas");
+      throwIfAborted(signal);
 
-      const maxSize = 180;
-
-      const scale = Math.min(
-        maxSize / firstPage.width,
-        maxSize / firstPage.height,
-        1,
-      );
-
-      thumbnail.width = Math.max(1, Math.round(firstPage.width * scale));
-
-      thumbnail.height = Math.max(1, Math.round(firstPage.height * scale));
-
-      const context = thumbnail.getContext("2d");
-
-      if (!context) {
-        return null;
-      }
-
-      context.drawImage(firstPage, 0, 0, thumbnail.width, thumbnail.height);
-
-      const blob = await new Promise<Blob | null>((resolve) => {
-        thumbnail.toBlob(resolve, "image/jpeg", 0.82);
-      });
-
-      if (!blob) {
-        return null;
-      }
-
-      return URL.createObjectURL(blob);
+      return URL.createObjectURL(preview.blob);
     }
 
     if (

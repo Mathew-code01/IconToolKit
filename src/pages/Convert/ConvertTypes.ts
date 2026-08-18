@@ -1,7 +1,6 @@
 // src/pages/Convert/ConvertTypes.ts
 
 // src/pages/Convert/ConvertTypes.ts
-// src/pages/Convert/ConvertTypes.ts
 
 export type ConvertFormat =
   | "png"
@@ -105,38 +104,6 @@ export interface ConversionResult {
   downloadUrl: string;
 }
 
-/**
- * A single rendered preview page.
- *
- * This allows PDF previews and other multi-page document
- * previews to display more than one page.
- */
-export interface ConversionPreviewPage {
-  /**
-   * Zero-based page index internally.
-   */
-  page: number;
-
-  /**
-   * Browser-displayable URL.
-   *
-   * Usually an object URL or data URL.
-   */
-  url: string;
-
-  /**
-   * Optional page dimensions.
-   */
-  width?: number | null;
-
-  height?: number | null;
-
-  /**
-   * Optional rendered image size.
-   */
-  size?: number | null;
-}
-
 export interface ConvertSettingsState {
   /**
    * Smart:
@@ -206,33 +173,7 @@ export interface ConversionPreview {
 
   sizeEstimated: boolean;
 
-  /**
-   * Backward-compatible single preview URL.
-   *
-   * Keep this because existing conversion code may still
-   * populate it.
-   */
   previewUrl: string | null;
-
-  /**
-   * Optional multi-page preview collection.
-   *
-   * PDF -> PNG/JPG and multi-page PDF output can use this.
-   */
-  previewPages?: ConversionPreviewPage[];
-
-  /**
-   * Optional total number of pages.
-   *
-   * Useful when the preview renderer knows the document
-   * contains more pages than are currently rendered.
-   */
-  pageCount?: number | null;
-
-  /**
-   * Optional currently rendered/available page count.
-   */
-  renderedPageCount?: number | null;
 
   status:
     | "idle"

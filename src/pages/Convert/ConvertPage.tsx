@@ -218,6 +218,52 @@ export default function ConvertPage() {
     [files, selectedFileId],
   );
 
+  useEffect(() => {
+    if (!selectedFile) {
+      return;
+    }
+
+    const nextSettings: ConvertSettingsState = {
+      ...selectedFile.settings,
+      icoSizes: [...selectedFile.settings.icoSizes],
+    };
+
+    const frame = window.requestAnimationFrame(() => {
+      setSettings((current) => {
+        if (
+          current.outputFormat === nextSettings.outputFormat &&
+          current.outputMode === nextSettings.outputMode &&
+          current.quality === nextSettings.quality &&
+          current.resizeEnabled === nextSettings.resizeEnabled &&
+          current.width === nextSettings.width &&
+          current.height === nextSettings.height &&
+          current.keepAspectRatio === nextSettings.keepAspectRatio &&
+          current.backgroundEnabled === nextSettings.backgroundEnabled &&
+          current.backgroundColor === nextSettings.backgroundColor &&
+          current.preserveTransparency === nextSettings.preserveTransparency &&
+          current.dpi === nextSettings.dpi &&
+          current.fileNameMode === nextSettings.fileNameMode &&
+          current.customFileName === nextSettings.customFileName &&
+          current.suffix === nextSettings.suffix &&
+          current.pdfPageSize === nextSettings.pdfPageSize &&
+          current.pdfOrientation === nextSettings.pdfOrientation &&
+          current.icoSizes.length === nextSettings.icoSizes.length &&
+          current.icoSizes.every(
+            (size, index) => size === nextSettings.icoSizes[index],
+          )
+        ) {
+          return current;
+        }
+
+        return nextSettings;
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [selectedFile?.id]);
+
   /*
    * Preview generation has its own AbortControllers.
    *
