@@ -1588,94 +1588,95 @@ async function createPdfPreviewSheet(
  * Large PDFs are intentionally capped for the visual preview,
  * while conversion itself remains uncapped.
  */
-// async function createPdfVisualPreview(
-//   file: File,
-//   signal?: AbortSignal,
-// ): Promise<{
-//   previewUrl: string;
-//   width: number;
-//   height: number;
-//   pageCount: number;
-//   previewedPageCount: number;
-// }> {
-//   throwIfAborted(signal);
+async function createPdfVisualPreview(
+  file: File | Blob,
+  signal?: AbortSignal,
+  settings?: ConvertSettingsState,
+): Promise<{
+  previewUrl: string;
+  width: number;
+  height: number;
+  pageCount: number;
+  previewedPageCount: number;
+}> {
+  throwIfAborted(signal);
 
-//   /*
-//    * Render at a lower scale than final conversion.
-//    * This keeps preview generation fast and memory-safe.
-//    */
-//   const pages =
-//     await renderPdfPages(
-//       file,
-//       signal,
-//       undefined,
-//       {
-//         maxPages:
-//           PDF_PREVIEW_MAX_PAGES,
+  const pages = await renderPdfPages(
+    file instanceof File
+      ? file
+      : new File([file], "preview.pdf", {
+          type: "application/pdf",
+        }),
+    signal,
+    undefined,
+    {
+      /*
+       * Render every page for the preview.
+       *
+       * The preview is generated as separate canvases and
+       * then combined into one visual sheet.
+       */
+      maxPages: PDF_PREVIEW_MAX_PAGES,
+      scale: 1.25,
+    },
+  );
 
-//         scale: 1.25,
-//       },
-//     );
+  throwIfAborted(signal);
 
-//   throwIfAborted(signal);
+  if (!pages.length) {
+    throw new Error("The PDF contains no renderable pages.");
+  }
 
-//   if (!pages.length) {
-//     throw new Error(
-//       "The PDF contains no renderable pages.",
-//     );
-//   }
+  /*
+   * If conversion settings are supplied, apply them
+   * to every page so the preview matches the output.
+   */
+  const previewPages = settings
+    ? pages.map((page) => drawToCanvas(page, settings))
+    : pages;
 
-//   const preview =
-//     await createPdfPreviewSheet(
-//       pages,
-//       signal,
-//     );
+  throwIfAborted(signal);
 
-//   throwIfAborted(signal);
+  const preview = await createPdfPreviewSheet(previewPages, signal);
 
-//   const pdfData =
-//     new Uint8Array(
-//       await file.arrayBuffer(),
-//     );
+  throwIfAborted(signal);
 
-//   const loadingTask =
-//     pdfjsLib.getDocument({
-//       data: pdfData,
-//       wasmUrl: PDF_WASM_URL,
-//     });
+  /*
+   * Read the actual PDF page count.
+   */
+  const pdfData = new Uint8Array(await file.arrayBuffer());
 
-//   let pageCount: number;
+  const loadingTask = pdfjsLib.getDocument({
+    data: pdfData,
+    wasmUrl: PDF_WASM_URL,
+  });
 
-//   try {
-//     const pdf = await loadingTask.promise;
+  let pageCount = pages.length;
 
-//     pageCount = pdf.numPages;
-//   } finally {
-//     try {
-//       await loadingTask.destroy();
-//     } catch {
-//       // Ignore cleanup errors.
-//     }
-//   }
+  try {
+    const pdf = await loadingTask.promise;
 
-//   return {
-//     previewUrl:
-//       URL.createObjectURL(
-//         preview.blob,
-//       ),
+    pageCount = pdf.numPages;
+  } finally {
+    try {
+      await loadingTask.destroy();
+    } catch {
+      // Ignore PDF.js cleanup errors.
+    }
+  }
 
-//     width:
-//       preview.width,
+  return {
+    previewUrl: URL.createObjectURL(preview.blob),
 
-//     height:
-//       preview.height,
+    width: preview.width,
 
-//     pageCount,
+    height: preview.height,
 
-//     previewedPageCount:
-//       pages.length,
-//   };
-// }
+    pageCount,
+
+    previewedPageCount: previewPages.length,
+  };
+}
 
 async function createMultiPagePdf(
   canvases: HTMLCanvasElement[],
@@ -2053,10 +2054,15 @@ async function previewImageConversion(
 
     return {
       blob,
+
       width: decoded.canvas.width,
+
       height: decoded.canvas.height,
+
       size: blob.size,
+
       previewUrl: URL.createObjectURL(previewBlob),
+
       fileName: makeOutputName(item.file, settings.outputFormat, settings),
     };
   }
@@ -2066,19 +2072,24 @@ async function previewImageConversion(
   throwIfAborted(signal);
 
   /*
-   * Canvas cannot encode PDF directly.
-   * Generate the actual PDF for the preview result,
-   * but use a PNG representation for the visual preview.
+   * =========================================================
+   * IMAGE → PDF
+   * =========================================================
+   *
+   * The actual result is a real PDF.
+   *
+   * But the visual preview is NOT the PDF blob.
+   *
+   * We render the generated PDF through PDF.js and create
+   * a PNG preview. This avoids depending on the browser's
+   * native PDF viewer and guarantees the preview is visible.
    */
   if (settings.outputFormat === "pdf") {
-    /*
-     * Generate the actual PDF.
-     *
-     * The preview URL intentionally points to the PDF itself
-     * instead of a PNG representation. ConvertPreview.tsx
-     * renders PDF output through an iframe.
-     */
     const blob = await createMultiPagePdf([previewCanvas], settings, signal);
+
+    throwIfAborted(signal);
+
+    const visualPreview = await createPdfVisualPreview(blob, signal, settings);
 
     throwIfAborted(signal);
 
@@ -2091,7 +2102,15 @@ async function previewImageConversion(
 
       size: blob.size,
 
-      previewUrl: URL.createObjectURL(blob),
+      /*
+       * IMPORTANT:
+       * This is now a PNG preview URL, not the PDF URL.
+       */
+      previewUrl: visualPreview.previewUrl,
+
+      pageCount: visualPreview.pageCount,
+
+      isMultiPage: visualPreview.pageCount > 1,
 
       fileName: makeOutputName(item.file, settings.outputFormat, settings),
     };
@@ -2107,10 +2126,15 @@ async function previewImageConversion(
 
   return {
     blob,
+
     width: previewCanvas.width,
+
     height: previewCanvas.height,
+
     size: blob.size,
+
     previewUrl: URL.createObjectURL(blob),
+
     fileName: makeOutputName(item.file, settings.outputFormat, settings),
   };
 }
