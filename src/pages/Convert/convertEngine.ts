@@ -2147,27 +2147,17 @@ async function previewPdfConversion(
   throwIfAborted(signal);
 
   /*
+   * =========================================================
    * PDF → PDF
+   * =========================================================
    *
-   * The previous implementation returned item.previewUrl,
-   * which points to the original PDF file.
+   * The source PDF itself is already the output.
    *
-   * That is not safe for an image-based preview component
-   * because <img> cannot display application/pdf.
-   *
-   * Instead, render the PDF pages into a professional
-   * multi-page PNG preview sheet.
+   * We still create a visual PNG preview so the UI does not
+   * depend on the browser's built-in PDF viewer.
    */
   if (settings.outputFormat === "pdf") {
-    /*
-     * PDF → PDF
-     *
-     * The output is already a PDF, so the preview should
-     * point directly to the PDF blob/file.
-     *
-     * ConvertPreview.tsx will render it using an iframe.
-     */
-    const pdfPreviewUrl = URL.createObjectURL(item.file);
+    const visualPreview = await createPdfVisualPreview(item.file, signal);
 
     throwIfAborted(signal);
 
@@ -2180,33 +2170,36 @@ async function previewPdfConversion(
 
       size: item.file.size,
 
-      previewUrl: pdfPreviewUrl,
+      /*
+       * PNG preview sheet containing all previewed pages.
+       */
+      previewUrl: visualPreview.previewUrl,
 
-      pageCount: undefined,
+      pageCount: visualPreview.pageCount,
 
-      isMultiPage: false,
+      isMultiPage: visualPreview.pageCount > 1,
 
       fileName: makeOutputName(item.file, settings.outputFormat, settings),
     };
   }
 
   /*
-   * PDF → image format
+   * =========================================================
+   * PDF → IMAGE
+   * =========================================================
    *
-   * The actual conversion still creates every page.
+   * Render the PDF pages for the visual preview.
    *
-   * The preview now renders every page rather than:
-   *
-   *   const firstPage = pages[0]
-   *
-   * which was the reason only page 1 was visible.
+   * The actual conversion remains completely separate and
+   * still processes every page in convertPdfToImages().
    */
   const pages = await renderPdfPages(item.file, signal, undefined, {
     /*
-     * Preview all normal PDFs. For very large PDFs,
-     * cap the UI preview to avoid an enormous canvas.
+     * The visual preview is intentionally capped so that
+     * a 500-page PDF cannot create an enormous browser
+     * canvas.
      *
-     * Conversion itself remains unlimited.
+     * Actual conversion is NOT capped.
      */
     maxPages: PDF_PREVIEW_MAX_PAGES,
 
@@ -2220,38 +2213,77 @@ async function previewPdfConversion(
   }
 
   /*
-   * Apply the same output settings to every preview page.
-   *
-   * This makes the preview represent the actual image
-   * conversion much more accurately.
+   * Apply output settings to EVERY preview page.
    */
   const previewPages: HTMLCanvasElement[] = [];
 
   for (let index = 0; index < pages.length; index += 1) {
     throwIfAborted(signal);
 
-    previewPages.push(drawToCanvas(pages[index], settings));
+    const convertedPage = drawToCanvas(pages[index], settings);
+
+    previewPages.push(convertedPage);
   }
 
+  /*
+   * Combine all pages into one professional visual
+   * preview sheet.
+   */
   const previewSheet = await createPdfPreviewSheet(previewPages, signal);
 
   throwIfAborted(signal);
 
   /*
-   * Important:
+   * The preview result needs a representative blob because
+   * the existing conversion queue expects one.
    *
-   * The returned blob remains the actual first-page
-   * converted image for backwards compatibility with
-   * the existing preview/result architecture.
+   * This is ONLY for preview metadata.
    *
-   * The real Convert operation is still handled by
-   * convertPdfToImages(), which generates every page.
+   * Actual PDF → image conversion is handled separately
+   * by convertPdfToImages(), which processes every page.
    */
   const firstPageOutput = await canvasToBlob(
     previewPages[0],
     settings.outputFormat,
     settings.quality,
   );
+
+  throwIfAborted(signal);
+
+  /*
+   * Get the real PDF page count so the UI can report:
+   *
+   * "5 pages"
+   *
+   * even if the visual preview is capped.
+   */
+  let totalPageCount = pages.length;
+
+  try {
+    const pdfData = new Uint8Array(await item.file.arrayBuffer());
+
+    const loadingTask = pdfjsLib.getDocument({
+      data: pdfData,
+      wasmUrl: PDF_WASM_URL,
+    });
+
+    try {
+      const pdf = await loadingTask.promise;
+
+      totalPageCount = pdf.numPages;
+    } finally {
+      try {
+        await loadingTask.destroy();
+      } catch {
+        // Ignore cleanup errors.
+      }
+    }
+  } catch {
+    /*
+     * If page-count inspection fails, the already-rendered
+     * pages are still valid.
+     */
+  }
 
   return {
     blob: firstPageOutput,
@@ -2262,11 +2294,16 @@ async function previewPdfConversion(
 
     size: firstPageOutput.size,
 
+    /*
+     * IMPORTANT:
+     *
+     * This is the PNG sheet, NOT the PDF.
+     */
     previewUrl: URL.createObjectURL(previewSheet.blob),
 
-    pageCount: pages.length,
+    pageCount: totalPageCount,
 
-    isMultiPage: pages.length > 1,
+    isMultiPage: totalPageCount > 1,
 
     fileName: makeOutputName(item.file, settings.outputFormat, settings),
   };
