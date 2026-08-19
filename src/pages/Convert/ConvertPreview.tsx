@@ -1,5 +1,7 @@
 // src/pages/Convert/ConvertPreview.tsx
 
+// src/pages/Convert/ConvertPreview.tsx
+
 import type { ConvertFile } from "./ConvertTypes";
 
 interface ConvertPreviewProps {
@@ -37,10 +39,20 @@ function isImageFormat(format: string): boolean {
   ].includes(format);
 }
 
-function getCategory(format: string): string {
-  if (format === "pdf") return "PDF document";
+function isPdfFormat(format: string): boolean {
+  return format === "pdf";
+}
 
-  if (format === "doc" || format === "docx" || format === "word") {
+function getCategory(format: string): string {
+  if (format === "pdf") {
+    return "PDF document";
+  }
+
+  if (
+    format === "doc" ||
+    format === "docx" ||
+    format === "word"
+  ) {
     return "Word document";
   }
 
@@ -51,30 +63,51 @@ function getCategory(format: string): string {
   return "File";
 }
 
-export default function ConvertPreview({ item }: ConvertPreviewProps) {
+export default function ConvertPreview({
+  item,
+}: ConvertPreviewProps) {
   if (!item) {
     return null;
   }
 
-  const sourceFormat = String(item.sourceFormat).toLowerCase();
+  const sourceFormat =
+    String(item.sourceFormat).toLowerCase();
 
-  const isPdf = sourceFormat === "pdf";
+  const outputFormat =
+    String(item.settings.outputFormat).toLowerCase();
 
-  const isImage = isImageFormat(sourceFormat);
+  const isPdfSource =
+    isPdfFormat(sourceFormat);
 
-  const isWord =
+  const isImageSource =
+    isImageFormat(sourceFormat);
+
+  const isWordSource =
     sourceFormat === "doc" ||
     sourceFormat === "docx" ||
     sourceFormat === "word";
 
-  const generatedPreview = item.preview?.previewUrl ?? null;
+  const isPdfOutput =
+    isPdfFormat(outputFormat);
 
-  const sourcePreview = item.previewUrl ?? null;
+  const isImageOutput =
+    isImageFormat(outputFormat);
 
-  const previewStatus = item.preview?.status ?? "idle";
+  const generatedPreview =
+    item.preview?.previewUrl ?? null;
+
+  const sourcePreview =
+    item.previewUrl ?? null;
+
+  const previewStatus =
+    item.preview?.status ?? "idle";
 
   return (
     <section className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface-subtle)]">
+      {/* =====================================================
+          HEADER
+      ====================================================== */}
+
       <div className="border-b border-[var(--border)] px-4 py-4 sm:px-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
@@ -97,31 +130,43 @@ export default function ConvertPreview({ item }: ConvertPreviewProps) {
         </div>
       </div>
 
+      {/* =====================================================
+          PREVIEW ERROR
+      ====================================================== */}
+
       {item.preview?.error ? (
         <div className="mx-4 mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[10px] leading-5 text-red-600 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400">
           {item.preview.error}
         </div>
       ) : null}
 
+      {/* =====================================================
+          PREVIEW GRID
+      ====================================================== */}
+
       <div className="grid grid-cols-1 gap-px bg-[var(--border)] lg:grid-cols-2">
+        {/* ===================================================
+            ORIGINAL
+        ==================================================== */}
+
         <PreviewPanel
           title="Original"
-          subtitle={`${item.sourceLabel} · ${formatBytes(item.file.size)}`}
+          subtitle={`${item.sourceLabel} · ${formatBytes(
+            item.file.size,
+          )}`}
         >
-          <div className="flex min-h-[300px] items-center justify-center overflow-hidden bg-[var(--surface-muted)] p-4">
-            {isPdf && sourcePreview ? (
-              <iframe
+          <div className="flex min-h-[340px] items-center justify-center overflow-hidden bg-[var(--surface-muted)] p-4">
+            {isPdfSource && sourcePreview ? (
+              <PdfPreviewFrame
                 src={sourcePreview}
                 title={`PDF preview of ${item.file.name}`}
-                className="h-[420px] w-full rounded-lg border border-[var(--border)] bg-white"
               />
-            ) : isImage && sourcePreview ? (
-              <img
+            ) : isImageSource && sourcePreview ? (
+              <ImagePreview
                 src={sourcePreview}
                 alt={`Preview of ${item.file.name}`}
-                className="max-h-[420px] max-w-full object-contain"
               />
-            ) : isWord ? (
+            ) : isWordSource ? (
               <DocumentPreview
                 format={sourceFormat}
                 fileName={item.file.name}
@@ -135,19 +180,40 @@ export default function ConvertPreview({ item }: ConvertPreviewProps) {
           </div>
         </PreviewPanel>
 
+        {/* ===================================================
+            OUTPUT
+        ==================================================== */}
+
         <PreviewPanel
           title="Output"
-          subtitle={`${item.settings.outputFormat.toUpperCase()} · ${formatBytes(
+          subtitle={`${outputFormat.toUpperCase()} · ${formatBytes(
             item.preview?.outputSize ?? null,
           )}`}
         >
-          <div className="relative flex min-h-[300px] items-center justify-center overflow-hidden bg-[var(--surface-muted)] p-4">
+          <div className="relative flex min-h-[340px] items-center justify-center overflow-hidden bg-[var(--surface-muted)] p-4">
             {generatedPreview ? (
-              <img
-                src={generatedPreview}
-                alt={`Generated ${item.settings.outputFormat} preview`}
-                className="max-h-[420px] max-w-full object-contain"
-              />
+              isPdfOutput ? (
+                /*
+                 * PDF output must NOT use <img>.
+                 *
+                 * The conversion engine now returns the actual
+                 * PDF blob URL for PDF previews.
+                 */
+                <PdfPreviewFrame
+                  src={generatedPreview}
+                  title={`Generated PDF preview for ${item.file.name}`}
+                />
+              ) : isImageOutput ? (
+                <ImagePreview
+                  src={generatedPreview}
+                  alt={`Generated ${outputFormat} preview`}
+                />
+              ) : (
+                <ImagePreview
+                  src={generatedPreview}
+                  alt={`Generated ${outputFormat} preview`}
+                />
+              )
             ) : previewStatus === "generating" ? (
               <GeneratingPreview />
             ) : previewStatus === "error" ? (
@@ -165,22 +231,30 @@ export default function ConvertPreview({ item }: ConvertPreviewProps) {
         </PreviewPanel>
       </div>
 
+      {/* =====================================================
+          INFORMATION
+      ====================================================== */}
+
       <div className="grid grid-cols-2 gap-px border-t border-[var(--border)] bg-[var(--border)] sm:grid-cols-4">
-        <InfoCard label="Original" value={item.sourceLabel} />
+        <InfoCard
+          label="Original"
+          value={item.sourceLabel}
+        />
 
         <InfoCard
           label="Output"
-          value={item.settings.outputFormat.toUpperCase()}
+          value={outputFormat.toUpperCase()}
         />
 
         <InfoCard
           label="Dimensions"
           value={
-            item.preview?.outputWidth && item.preview?.outputHeight
+            item.preview?.outputWidth &&
+            item.preview?.outputHeight
               ? `${item.preview.outputWidth} × ${item.preview.outputHeight}`
               : item.width && item.height
                 ? `${item.width} × ${item.height}`
-                : isPdf
+                : isPdfSource
                   ? "PDF"
                   : "—"
           }
@@ -188,14 +262,69 @@ export default function ConvertPreview({ item }: ConvertPreviewProps) {
 
         <InfoCard
           label="Estimated size"
-          value={formatBytes(item.preview?.outputSize ?? null)}
+          value={formatBytes(
+            item.preview?.outputSize ?? null,
+          )}
         />
       </div>
     </section>
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
+/* =========================================================
+   PDF PREVIEW
+========================================================= */
+
+function PdfPreviewFrame({
+  src,
+  title,
+}: {
+  src: string;
+  title: string;
+}) {
+  return (
+    <div className="h-[420px] w-full min-w-0 overflow-hidden rounded-xl border border-[var(--border)] bg-white shadow-sm">
+      <iframe
+        src={src}
+        title={title}
+        className="block h-full w-full border-0 bg-white"
+        loading="lazy"
+      />
+    </div>
+  );
+}
+
+/* =========================================================
+   IMAGE PREVIEW
+========================================================= */
+
+function ImagePreview({
+  src,
+  alt,
+}: {
+  src: string;
+  alt: string;
+}) {
+  return (
+    <div className="flex h-[420px] w-full items-center justify-center overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
+      <img
+        src={src}
+        alt={alt}
+        className="max-h-full max-w-full object-contain"
+      />
+    </div>
+  );
+}
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+function StatusBadge({
+  status,
+}: {
+  status: string;
+}) {
   const label =
     status === "generating"
       ? "Generating"
@@ -218,6 +347,10 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+/* =========================================================
+   GENERATING
+========================================================= */
+
 function GeneratingPreview() {
   return (
     <div className="text-center">
@@ -236,6 +369,10 @@ function GeneratingPreview() {
   );
 }
 
+/* =========================================================
+   DOCUMENT
+========================================================= */
+
 function DocumentPreview({
   format,
   fileName,
@@ -247,7 +384,9 @@ function DocumentPreview({
     <div className="text-center">
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
         <span className="text-xs font-bold uppercase text-[var(--brand)]">
-          {format === "pdf" ? "PDF" : "DOC"}
+          {format === "pdf"
+            ? "PDF"
+            : "DOC"}
         </span>
       </div>
 
@@ -265,6 +404,10 @@ function DocumentPreview({
     </div>
   );
 }
+
+/* =========================================================
+   PANEL
+========================================================= */
 
 function PreviewPanel({
   title,
@@ -292,6 +435,10 @@ function PreviewPanel({
   );
 }
 
+/* =========================================================
+   EMPTY
+========================================================= */
+
 function EmptyPreview({
   title,
   description,
@@ -303,7 +450,9 @@ function EmptyPreview({
     <div className="text-center">
       <div className="mx-auto h-10 w-10 rounded-xl border border-[var(--border)] bg-[var(--surface)]" />
 
-      <p className="mt-3 text-xs font-medium text-[var(--text)]">{title}</p>
+      <p className="mt-3 text-xs font-medium text-[var(--text)]">
+        {title}
+      </p>
 
       <p className="mx-auto mt-1 max-w-[240px] text-[10px] leading-5 text-[var(--text-muted)]">
         {description}
@@ -312,7 +461,17 @@ function EmptyPreview({
   );
 }
 
-function InfoCard({ label, value }: { label: string; value: string }) {
+/* =========================================================
+   INFO CARD
+========================================================= */
+
+function InfoCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
   return (
     <div className="min-w-0 bg-[var(--surface-subtle)] px-3 py-3">
       <p className="text-[9px] uppercase tracking-wide text-[var(--text-muted)]">
