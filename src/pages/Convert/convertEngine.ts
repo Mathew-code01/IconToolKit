@@ -1601,25 +1601,24 @@ async function createPdfVisualPreview(
 }> {
   throwIfAborted(signal);
 
-  const pages = await renderPdfPages(
+  const pdfFile =
     file instanceof File
       ? file
       : new File([file], "preview.pdf", {
           type: "application/pdf",
-        }),
-    signal,
-    undefined,
-    {
-      /*
-       * Render every page for the preview.
-       *
-       * The preview is generated as separate canvases and
-       * then combined into one visual sheet.
-       */
-      maxPages: PDF_PREVIEW_MAX_PAGES,
-      scale: 1.25,
-    },
-  );
+        });
+
+  /*
+   * Render only the pages required for the visual preview.
+   *
+   * This is intentionally independent from the actual
+   * conversion path. The real conversion must never be
+   * limited by PDF_PREVIEW_MAX_PAGES.
+   */
+  const pages = await renderPdfPages(pdfFile, signal, undefined, {
+    maxPages: PDF_PREVIEW_MAX_PAGES,
+    scale: 1.25,
+  });
 
   throwIfAborted(signal);
 
@@ -1628,8 +1627,8 @@ async function createPdfVisualPreview(
   }
 
   /*
-   * If conversion settings are supplied, apply them
-   * to every page so the preview matches the output.
+   * Apply conversion settings to the visual preview
+   * when settings are available.
    */
   const previewPages = settings
     ? pages.map((page) => drawToCanvas(page, settings))
@@ -1637,21 +1636,31 @@ async function createPdfVisualPreview(
 
   throwIfAborted(signal);
 
+  /*
+   * Build the browser-friendly visual preview.
+   *
+   * This PNG is ONLY the preview representation.
+   * It is NOT the converted output.
+   */
   const preview = await createPdfPreviewSheet(previewPages, signal);
 
   throwIfAborted(signal);
 
   /*
    * Read the actual PDF page count.
+   *
+   * Do this separately from rendering so a 100-page PDF
+   * can still report "100 pages" even though only the first
+   * PDF_PREVIEW_MAX_PAGES pages are rendered visually.
    */
-  const pdfData = new Uint8Array(await file.arrayBuffer());
+  const pdfData = new Uint8Array(await pdfFile.arrayBuffer());
 
   const loadingTask = pdfjsLib.getDocument({
     data: pdfData,
     wasmUrl: PDF_WASM_URL,
   });
 
-  let pageCount = pages.length;
+  let pageCount: number;
 
   try {
     const pdf = await loadingTask.promise;
@@ -1661,9 +1670,14 @@ async function createPdfVisualPreview(
     try {
       await loadingTask.destroy();
     } catch {
-      // Ignore PDF.js cleanup errors.
+      /*
+       * PDF.js cleanup errors should never
+       * replace the useful conversion result.
+       */
     }
   }
+
+  throwIfAborted(signal);
 
   return {
     previewUrl: URL.createObjectURL(preview.blob),
