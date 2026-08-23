@@ -1,13 +1,14 @@
 // src/pages/Home/HeroSection.tsx
 
-import { useRef, useState } from "react";
 import {
   ArrowRight,
   Check,
+  ChevronRight,
   FileImage,
   FileText,
   Globe2,
   ImageIcon,
+  Layers3,
   Lock,
   ScanSearch,
   Sparkles,
@@ -15,9 +16,10 @@ import {
   WandSparkles,
   Zap,
 } from "lucide-react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
-import IconSpecimenStrip from "./IconSpecimenStrip";
+import logo from "../../assets/logo.png";
 
 const TRUST_ITEMS = ["Images", "Icons", "PDFs", "Documents", "Web assets"];
 
@@ -50,6 +52,682 @@ const QUICK_ACTIONS = [
 
 const SUPPORTED_FORMATS = ["PNG", "JPG", "WEBP", "SVG", "PDF", "DOCX"];
 
+const WORKSPACE_TOOLS = [
+  {
+    label: "Create",
+    icon: WandSparkles,
+  },
+  {
+    label: "Edit",
+    icon: ImageIcon,
+  },
+  {
+    label: "Convert",
+    icon: FileImage,
+  },
+  {
+    label: "Inspect",
+    icon: ScanSearch,
+  },
+];
+
+const ASSET_SIZES = [
+  {
+    size: "16",
+    label: "Favicon",
+  },
+  {
+    size: "32",
+    label: "Web",
+  },
+  {
+    size: "180",
+    label: "Apple",
+  },
+  {
+    size: "512",
+    label: "PWA",
+  },
+];
+
+function BrandMark({
+  size = "md",
+  className = "",
+}: {
+  size?: "sm" | "md" | "lg";
+  className?: string;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  const sizes = {
+    sm: "h-7 w-7 rounded-lg text-[9px]",
+    md: "h-9 w-9 rounded-xl text-[10px]",
+    lg: "h-12 w-12 rounded-2xl text-xs",
+  };
+
+  return (
+    <span
+      className={`
+        relative
+        inline-flex
+        shrink-0
+        items-center
+        justify-center
+        overflow-hidden
+        border
+        border-[var(--border)]
+        bg-[var(--surface)]
+        shadow-[var(--shadow-xs)]
+        ${sizes[size]}
+        ${className}
+      `}
+    >
+      {!failed ? (
+        <img
+          src={logo}
+          alt="IconToolkit"
+          className="h-full w-full object-contain p-1.5"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <span className="font-bold tracking-[-0.08em] text-[var(--brand)]">
+          IT
+        </span>
+      )}
+    </span>
+  );
+}
+
+function WorkspacePreview() {
+  return (
+    <div className="relative">
+      {/* =====================================================
+          Floating background objects
+          ===================================================== */}
+
+      <div
+        aria-hidden="true"
+        className="
+          pointer-events-none
+          absolute
+          -right-5
+          top-8
+          hidden
+          h-32
+          w-32
+          rounded-full
+          bg-[var(--brand)]/[0.10]
+          blur-3xl
+          lg:block
+        "
+      />
+
+      <div
+        aria-hidden="true"
+        className="
+          pointer-events-none
+          absolute
+          -bottom-10
+          -left-8
+          hidden
+          h-40
+          w-40
+          rounded-full
+          bg-[var(--brand-secondary)]/[0.08]
+          blur-3xl
+          lg:block
+        "
+      />
+
+      {/* =====================================================
+          Floating asset card — top right
+          ===================================================== */}
+
+      <div
+        className="
+          absolute
+          -right-3
+          -top-5
+          z-20
+          hidden
+          w-40
+          rounded-2xl
+          border
+          border-[var(--border)]
+          bg-[var(--surface)]/90
+          p-3
+          shadow-[var(--shadow-lg)]
+          backdrop-blur-xl
+          transition-transform
+          duration-500
+          hover:-translate-y-1
+          hover:rotate-1
+          sm:block
+          lg:-right-8
+          lg:-top-7
+        "
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+            Asset ready
+          </span>
+
+          <span className="flex h-5 w-5 items-center justify-center rounded-md bg-[var(--success-bg)] text-[var(--success)]">
+            <Check size={11} strokeWidth={2.5} />
+          </span>
+        </div>
+
+        <div className="mt-3 flex items-center gap-2.5">
+          <BrandMark size="sm" />
+
+          <div className="min-w-0">
+            <p className="truncate text-[10px] font-semibold text-[var(--text)]">
+              brand-mark.png
+            </p>
+
+            <p className="mt-0.5 text-[9px] text-[var(--text-muted)]">
+              512 × 512
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* =====================================================
+          Floating asset card — bottom left
+          ===================================================== */}
+
+      <div
+        className="
+          absolute
+          -bottom-5
+          -left-3
+          z-20
+          hidden
+          w-44
+          rounded-2xl
+          border
+          border-[var(--border)]
+          bg-[var(--surface)]/90
+          p-3
+          shadow-[var(--shadow-lg)]
+          backdrop-blur-xl
+          transition-transform
+          duration-500
+          hover:-translate-y-1
+          hover:-rotate-1
+          sm:block
+          lg:-bottom-7
+          lg:-left-8
+        "
+      >
+        <div className="flex items-center gap-2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--surface-brand)] text-[var(--brand)]">
+            <Zap size={13} />
+          </span>
+
+          <div>
+            <p className="text-[10px] font-semibold text-[var(--text)]">
+              Production export
+            </p>
+
+            <p className="text-[9px] text-[var(--text-muted)]">Ready to ship</p>
+          </div>
+        </div>
+
+        <div className="mt-3 flex items-center gap-1.5">
+          {ASSET_SIZES.slice(0, 3).map((item) => (
+            <span
+              key={item.size}
+              className="
+                rounded-md
+                border
+                border-[var(--border)]
+                bg-[var(--surface-subtle)]
+                px-1.5
+                py-1
+                font-mono
+                text-[8px]
+                font-medium
+                text-[var(--text-muted)]
+              "
+            >
+              {item.size}
+            </span>
+          ))}
+
+          <span className="text-[8px] text-[var(--text-subtle)]">+</span>
+        </div>
+      </div>
+
+      {/* =====================================================
+          Main workspace
+          ===================================================== */}
+
+      <div
+        className="
+          relative
+          overflow-hidden
+          rounded-[1.5rem]
+          border
+          border-[var(--border)]
+          bg-[var(--surface)]
+          shadow-[var(--shadow-xl)]
+          transition-all
+          duration-500
+          hover:-translate-y-1
+          hover:shadow-[var(--shadow-xl)]
+          sm:rounded-[1.75rem]
+        "
+      >
+        {/* Top browser bar */}
+
+        <div
+          className="
+            flex
+            h-10
+            items-center
+            justify-between
+            border-b
+            border-[var(--border)]
+            bg-[var(--surface-subtle)]
+            px-3
+            sm:h-11
+            sm:px-4
+          "
+        >
+          <div className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-[var(--border-strong)]" />
+            <span className="h-2 w-2 rounded-full bg-[var(--border-strong)]" />
+            <span className="h-2 w-2 rounded-full bg-[var(--border-strong)]" />
+          </div>
+
+          <div
+            className="
+              flex
+              items-center
+              gap-1.5
+              rounded-md
+              border
+              border-[var(--border)]
+              bg-[var(--surface)]
+              px-2.5
+              py-1
+            "
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
+
+            <span className="font-mono text-[8px] text-[var(--text-muted)]">
+              local workspace
+            </span>
+          </div>
+
+          <div className="w-8" />
+        </div>
+
+        {/* Application header */}
+
+        <div
+          className="
+            flex
+            items-center
+            justify-between
+            border-b
+            border-[var(--border)]
+            px-4
+            py-3
+            sm:px-5
+          "
+        >
+          <div className="flex min-w-0 items-center gap-2.5">
+            <BrandMark size="sm" />
+
+            <div className="min-w-0">
+              <p className="truncate text-[10px] font-semibold text-[var(--text)]">
+                Asset workspace
+              </p>
+
+              <p className="truncate text-[8px] text-[var(--text-muted)]">
+                Untitled project
+              </p>
+            </div>
+          </div>
+
+          <div className="hidden items-center gap-1 sm:flex">
+            {WORKSPACE_TOOLS.map((tool, index) => {
+              const Icon = tool.icon;
+
+              return (
+                <div
+                  key={tool.label}
+                  className={`
+                    flex
+                    items-center
+                    gap-1.5
+                    rounded-md
+                    px-2
+                    py-1.5
+                    text-[8px]
+                    font-medium
+                    transition-colors
+                    ${
+                      index === 0
+                        ? "bg-[var(--surface-brand)] text-[var(--brand)]"
+                        : "text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
+                    }
+                  `}
+                >
+                  <Icon size={10} />
+                  {tool.label}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--surface-muted)] text-[var(--text-muted)] sm:hidden">
+            <Layers3 size={12} />
+          </div>
+        </div>
+
+        {/* Workspace body */}
+
+        <div
+          className="
+            relative
+            bg-[var(--editor-workspace)]
+            p-3
+            sm:p-5
+            lg:p-6
+          "
+        >
+          {/* subtle workspace grid */}
+
+          <div
+            aria-hidden="true"
+            className="
+              pointer-events-none
+              absolute
+              inset-0
+              opacity-50
+              [background-image:linear-gradient(to_right,var(--editor-grid)_1px,transparent_1px),linear-gradient(to_bottom,var(--editor-grid)_1px,transparent_1px)]
+              [background-size:var(--editor-grid-size)_var(--editor-grid-size)]
+            "
+          />
+
+          <div className="relative grid gap-3 sm:grid-cols-[1.15fr_.85fr]">
+            {/* Main canvas */}
+
+            <div
+              className="
+                relative
+                min-h-[280px]
+                overflow-hidden
+                rounded-2xl
+                border
+                border-[var(--border)]
+                bg-[var(--surface)]
+                shadow-[var(--shadow-sm)]
+                sm:min-h-[330px]
+              "
+            >
+              <div
+                className="
+                  flex
+                  items-center
+                  justify-between
+                  border-b
+                  border-[var(--border)]
+                  px-3
+                  py-2.5
+                "
+              >
+                <div>
+                  <p className="text-[9px] font-semibold text-[var(--text)]">
+                    Preview
+                  </p>
+
+                  <p className="mt-0.5 text-[8px] text-[var(--text-muted)]">
+                    brand-mark.svg
+                  </p>
+                </div>
+
+                <span className="rounded-md bg-[var(--success-bg)] px-1.5 py-1 text-[7px] font-semibold text-[var(--success)]">
+                  VALID
+                </span>
+              </div>
+
+              <div className="flex min-h-[230px] items-center justify-center p-5 sm:min-h-[275px]">
+                {/* checkerboard canvas */}
+
+                <div
+                  className="
+                    relative
+                    flex
+                    h-44
+                    w-44
+                    items-center
+                    justify-center
+                    overflow-hidden
+                    rounded-2xl
+                    border
+                    border-[var(--border)]
+                    bg-[var(--surface)]
+                    shadow-[var(--shadow-md)]
+                    transition-transform
+                    duration-500
+                    hover:scale-[1.03]
+                    sm:h-52
+                    sm:w-52
+                  "
+                >
+                  <div
+                    aria-hidden="true"
+                    className="
+                      absolute
+                      inset-0
+                      opacity-40
+                      [background-image:linear-gradient(45deg,var(--surface-muted)_25%,transparent_25%),linear-gradient(-45deg,var(--surface-muted)_25%,transparent_25%),linear-gradient(45deg,transparent_75%,var(--surface-muted)_75%),linear-gradient(-45deg,transparent_75%,var(--surface-muted)_75%)]
+                      [background-position:0_0,0_8px,8px_-8px,-8px_0]
+                      [background-size:16px_16px]
+                    "
+                  />
+
+                  <div className="relative flex h-28 w-28 items-center justify-center rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-lg)] sm:h-32 sm:w-32">
+                    <BrandMark
+                      size="lg"
+                      className="h-full w-full rounded-[1.35rem] border-0 shadow-none"
+                    />
+                  </div>
+
+                  <span className="absolute bottom-2 left-2 rounded-md border border-[var(--border)] bg-[var(--surface)]/90 px-1.5 py-1 font-mono text-[7px] text-[var(--text-muted)] backdrop-blur">
+                    512 × 512
+                  </span>
+
+                  <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface)]/90 text-[var(--brand)] backdrop-blur">
+                    <Sparkles size={9} />
+                  </span>
+                </div>
+              </div>
+
+              {/* Bottom status */}
+
+              <div
+                className="
+                  flex
+                  items-center
+                  justify-between
+                  border-t
+                  border-[var(--border)]
+                  px-3
+                  py-2.5
+                "
+              >
+                <div className="flex items-center gap-1.5">
+                  <Lock size={9} className="text-[var(--success)]" />
+
+                  <span className="text-[8px] text-[var(--text-muted)]">
+                    Processed locally
+                  </span>
+                </div>
+
+                <span className="font-mono text-[8px] text-[var(--text-subtle)]">
+                  SVG
+                </span>
+              </div>
+            </div>
+
+            {/* Inspector / output panel */}
+
+            <div className="grid gap-3">
+              <div
+                className="
+                  rounded-2xl
+                  border
+                  border-[var(--border)]
+                  bg-[var(--surface)]
+                  p-3.5
+                  shadow-[var(--shadow-sm)]
+                "
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-[9px] font-semibold text-[var(--text)]">
+                    Asset details
+                  </p>
+
+                  <ChevronRight
+                    size={11}
+                    className="text-[var(--text-subtle)]"
+                  />
+                </div>
+
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {[
+                    ["Type", "SVG"],
+                    ["Size", "8.4 KB"],
+                    ["Canvas", "512²"],
+                    ["Status", "Ready"],
+                  ].map(([label, value]) => (
+                    <div
+                      key={label}
+                      className="
+                        rounded-lg
+                        border
+                        border-[var(--border)]
+                        bg-[var(--surface-subtle)]
+                        px-2.5
+                        py-2
+                      "
+                    >
+                      <p className="text-[7px] uppercase tracking-[0.08em] text-[var(--text-subtle)]">
+                        {label}
+                      </p>
+
+                      <p className="mt-1 truncate text-[9px] font-semibold text-[var(--text)]">
+                        {value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div
+                className="
+                  rounded-2xl
+                  border
+                  border-[var(--border)]
+                  bg-[var(--surface)]
+                  p-3.5
+                  shadow-[var(--shadow-sm)]
+                "
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-[9px] font-semibold text-[var(--text)]">
+                    Export set
+                  </p>
+
+                  <span className="text-[8px] font-medium text-[var(--brand)]">
+                    4 assets
+                  </span>
+                </div>
+
+                <div className="mt-3 space-y-1.5">
+                  {ASSET_SIZES.map((item, index) => (
+                    <div
+                      key={item.size}
+                      className="
+                        flex
+                        items-center
+                        justify-between
+                        rounded-lg
+                        border
+                        border-[var(--border)]
+                        bg-[var(--surface-subtle)]
+                        px-2.5
+                        py-2
+                        transition-colors
+                        hover:border-[var(--border-brand)]
+                        hover:bg-[var(--surface-brand)]
+                      "
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-5 w-5 items-center justify-center rounded-md bg-[var(--surface-muted)] font-mono text-[7px] font-semibold text-[var(--text-muted)]">
+                          {item.size}
+                        </span>
+
+                        <span className="text-[8px] font-medium text-[var(--text-secondary)]">
+                          {item.label}
+                        </span>
+                      </div>
+
+                      <Check
+                        size={9}
+                        className={
+                          index === 3
+                            ? "text-[var(--text-subtle)]"
+                            : "text-[var(--success)]"
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Workspace footer */}
+
+        <div
+          className="
+            flex
+            items-center
+            justify-between
+            border-t
+            border-[var(--border)]
+            bg-[var(--surface)]
+            px-4
+            py-2.5
+            sm:px-5
+          "
+        >
+          <div className="flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-md bg-[var(--surface-brand)] text-[var(--brand)]">
+              <Zap size={9} />
+            </span>
+
+            <span className="text-[8px] font-medium text-[var(--text-muted)]">
+              Fast, local, focused
+            </span>
+          </div>
+
+          <span className="font-mono text-[8px] text-[var(--text-subtle)]">
+            ICONTOOLKIT
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function HeroSection() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -66,11 +744,9 @@ export default function HeroSection() {
     }
 
     /*
-     * Preserve the existing image workflow.
-     *
-     * Documents/PDFs can later be routed through their own
-     * workspace based on file type.
+     * Existing image workflow is preserved.
      */
+
     if (file.type.startsWith("image/")) {
       const reader = new FileReader();
 
@@ -87,12 +763,14 @@ export default function HeroSection() {
       };
 
       reader.readAsDataURL(file);
+
       return;
     }
 
     /*
-     * Keep the landing page extensible for non-image workflows.
+     * PDF/document workflow remains extensible.
      */
+
     sessionStorage.setItem("icon-toolkit-pending-file-name", file.name);
 
     window.location.href = "/convert";
@@ -120,102 +798,266 @@ export default function HeroSection() {
   };
 
   return (
-    <section className="relative isolate overflow-hidden border-b border-[var(--border)] bg-[var(--background)]">
+    <section
+      className="
+        relative
+        isolate
+        overflow-hidden
+        border-b
+        border-[var(--border)]
+        bg-[var(--background)]
+      "
+    >
       {/* =====================================================
-          Ambient background
+          HERO BACKGROUND
           ===================================================== */}
 
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 overflow-hidden"
       >
-        <div className="absolute left-1/2 top-[-20rem] h-[42rem] w-[60rem] -translate-x-1/2 rounded-full bg-[var(--brand)]/[0.07] blur-3xl dark:bg-[var(--brand)]/[0.10]" />
+        <div
+          className="
+            absolute
+            left-[15%]
+            top-[-24rem]
+            h-[48rem]
+            w-[48rem]
+            rounded-full
+            bg-[var(--brand)]/[0.055]
+            blur-3xl
+            dark:bg-[var(--brand)]/[0.09]
+          "
+        />
 
-        <div className="absolute -left-40 top-[35%] h-72 w-72 rounded-full bg-[var(--brand-secondary)]/[0.035] blur-3xl" />
+        <div
+          className="
+            absolute
+            right-[-14rem]
+            top-[18%]
+            h-[30rem]
+            w-[30rem]
+            rounded-full
+            bg-[var(--brand-secondary)]/[0.035]
+            blur-3xl
+          "
+        />
 
-        <div className="absolute -right-40 top-[45%] h-80 w-80 rounded-full bg-[var(--brand-accent)]/[0.035] blur-3xl" />
+        <div
+          className="
+            absolute
+            left-[-14rem]
+            bottom-[5%]
+            h-[26rem]
+            w-[26rem]
+            rounded-full
+            bg-[var(--brand-accent)]/[0.025]
+            blur-3xl
+          "
+        />
 
         <div
           className="
             absolute
             inset-0
-            opacity-[0.38]
+            opacity-[0.28]
             [background-image:linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)]
-            [background-size:56px_56px]
-            [mask-image:radial-gradient(ellipse_75%_65%_at_50%_20%,black,transparent_90%)]
+            [background-size:64px_64px]
+            [mask-image:radial-gradient(ellipse_90%_75%_at_50%_20%,black,transparent_88%)]
           "
         />
       </div>
 
       {/* =====================================================
-          Main hero
+          HERO CONTAINER
           ===================================================== */}
 
-      <div className="relative mx-auto max-w-[var(--content-max-width)] px-4 pb-16 pt-12 sm:px-6 sm:pb-20 sm:pt-16 lg:px-8 lg:pb-24 lg:pt-20 xl:px-10">
-        {/* Product positioning */}
-        <div className="flex justify-center">
-          <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)]/80 px-3 py-1.5 shadow-[var(--shadow-xs)] backdrop-blur-xl">
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--surface-brand)] text-[var(--brand)]">
-              <Sparkles size={11} strokeWidth={2} aria-hidden="true" />
-            </span>
+      <div
+        className="
+          relative
+          mx-auto
+          max-w-[var(--content-max-width)]
+          px-4
+          pb-16
+          pt-10
+          sm:px-6
+          sm:pb-20
+          sm:pt-14
+          lg:px-8
+          lg:pb-24
+          lg:pt-20
+          xl:px-10
+          xl:pb-28
+        "
+      >
+        {/* ===================================================
+            MAIN TWO-COLUMN COMPOSITION
+            =================================================== */}
 
-            <span className="truncate text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)] sm:text-[11px]">
-              The browser-first asset workspace
-            </span>
+        <div
+          className="
+            grid
+            items-center
+            gap-12
+            lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]
+            lg:gap-14
+            xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]
+            xl:gap-20
+          "
+        >
+          {/* =================================================
+              LEFT — PRODUCT MESSAGE
+              ================================================= */}
 
-            <span className="hidden h-1 w-1 rounded-full bg-[var(--border-strong)] sm:block" />
+          <div className="max-w-2xl">
+            {/* Eyebrow */}
 
-            <span className="hidden text-[10px] font-medium text-[var(--text-muted)] sm:block">
-              Private by default
-            </span>
-          </div>
-        </div>
+            <div
+              className="
+                inline-flex
+                max-w-full
+                items-center
+                gap-2
+                rounded-full
+                border
+                border-[var(--border)]
+                bg-[var(--surface)]/80
+                px-3
+                py-1.5
+                shadow-[var(--shadow-xs)]
+                backdrop-blur-xl
+              "
+            >
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--surface-brand)] text-[var(--brand)]">
+                <Sparkles size={10} strokeWidth={2} />
+              </span>
 
-        {/* =================================================
-            Heading
-            ================================================= */}
+              <span className="truncate text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)] sm:text-[10px]">
+                Browser-first asset workspace
+              </span>
 
-        <div className="mx-auto mt-7 max-w-5xl text-center sm:mt-8">
-          <h1 className="text-[2.7rem] font-bold leading-[0.98] tracking-[-0.055em] text-[var(--text)] sm:text-6xl lg:text-7xl xl:text-[5.25rem]">
-            Your files.
-            <br />
-            <span className="itk-gradient-text">Your entire workflow.</span>
-          </h1>
+              <span className="hidden h-1 w-1 shrink-0 rounded-full bg-[var(--border-strong)] sm:block" />
 
-          <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-[var(--text-secondary)] sm:mt-7 sm:text-lg sm:leading-8 lg:text-xl">
-            Create, edit, convert, optimize, inspect, and ship digital assets
-            from one beautifully focused workspace. No bloated desktop software.
-            No unnecessary uploads.
-          </p>
-        </div>
+              <span className="hidden whitespace-nowrap text-[9px] font-medium text-[var(--text-muted)] sm:block">
+                Private by default
+              </span>
+            </div>
 
-        {/* =================================================
-            Quick workflow navigation
-            ================================================= */}
+            {/* Heading */}
 
-        <div className="mx-auto mt-8 grid max-w-3xl grid-cols-2 gap-2 sm:mt-10 sm:grid-cols-4">
-          {QUICK_ACTIONS.map((action) => {
-            const Icon = action.icon;
+            <h1
+              className="
+                mt-7
+                max-w-3xl
+                text-[3rem]
+                font-bold
+                leading-[0.94]
+                tracking-[-0.065em]
+                text-[var(--text)]
+                sm:mt-8
+                sm:text-6xl
+                lg:text-[4.5rem]
+                xl:text-[5.15rem]
+              "
+            >
+              Everything you need
+              <span className="block itk-gradient-text">
+                to ship better assets.
+              </span>
+            </h1>
 
-            return (
-              <Link
-                key={action.href}
-                to={action.href}
+            {/* Description */}
+
+            <p
+              className="
+                mt-6
+                max-w-xl
+                text-[15px]
+                leading-7
+                text-[var(--text-secondary)]
+                sm:mt-7
+                sm:text-lg
+                sm:leading-8
+                lg:text-[1.05rem]
+              "
+            >
+              Create, edit, convert, optimize and inspect images, icons, PDFs,
+              documents and web assets from one focused workspace. Built for
+              people who care about the details.
+            </p>
+
+            {/* Primary actions */}
+
+            <div
+              className="
+                mt-8
+                flex
+                flex-col
+                items-stretch
+                gap-2.5
+                sm:mt-9
+                sm:flex-row
+                sm:items-center
+              "
+            >
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
                 className="
                   group
-                  flex
+                  inline-flex
+                  h-12
                   items-center
-                  gap-3
+                  justify-center
+                  gap-2.5
+                  rounded-xl
+                  bg-[var(--brand)]
+                  px-5
+                  text-sm
+                  font-semibold
+                  text-white
+                  shadow-[var(--shadow-brand)]
+                  transition-all
+                  duration-300
+                  hover:-translate-y-0.5
+                  hover:bg-[var(--brand-hover)]
+                  hover:shadow-[var(--shadow-lg)]
+                  active:translate-y-0
+                  focus-visible:outline-none
+                  focus-visible:ring-2
+                  focus-visible:ring-[var(--brand)]
+                  focus-visible:ring-offset-2
+                  focus-visible:ring-offset-[var(--background)]
+                "
+              >
+                <Upload size={16} />
+                Start with a file
+                <ArrowRight
+                  size={15}
+                  className="transition-transform duration-300 group-hover:translate-x-0.5"
+                />
+              </button>
+
+              <Link
+                to="/inspect"
+                className="
+                  inline-flex
+                  h-12
+                  items-center
+                  justify-center
+                  gap-2
                   rounded-xl
                   border
                   border-[var(--border)]
-                  bg-[var(--surface)]/75
-                  px-3
-                  py-3
-                  text-left
+                  bg-[var(--surface)]/70
+                  px-5
+                  text-sm
+                  font-semibold
+                  text-[var(--text)]
+                  shadow-[var(--shadow-xs)]
                   backdrop-blur-xl
                   transition-all
-                  duration-200
+                  duration-300
                   hover:-translate-y-0.5
                   hover:border-[var(--border-brand)]
                   hover:bg-[var(--surface)]
@@ -225,38 +1067,135 @@ export default function HeroSection() {
                   focus-visible:ring-[var(--brand)]
                 "
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-muted)] text-[var(--text-secondary)] transition-colors group-hover:bg-[var(--surface-brand)] group-hover:text-[var(--brand)]">
-                  <Icon size={17} strokeWidth={1.8} />
-                </span>
-
-                <span className="min-w-0">
-                  <span className="block text-xs font-semibold text-[var(--text)]">
-                    {action.label}
-                  </span>
-
-                  <span className="mt-0.5 block truncate text-[10px] text-[var(--text-muted)]">
-                    {action.description}
-                  </span>
-                </span>
-
-                <ArrowRight
-                  size={13}
-                  className="ml-auto shrink-0 text-[var(--text-subtle)] transition-all group-hover:translate-x-0.5 group-hover:text-[var(--brand)]"
-                />
+                <Globe2 size={16} className="text-[var(--text-muted)]" />
+                Inspect a website
+                <ArrowRight size={14} className="text-[var(--text-subtle)]" />
               </Link>
-            );
-          })}
+            </div>
+
+            {/* Privacy signal */}
+
+            <div
+              className="
+                mt-4
+                flex
+                items-center
+                gap-2
+                text-[10px]
+                text-[var(--text-muted)]
+                sm:text-[11px]
+              "
+            >
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--success-bg)]">
+                <Lock size={10} className="text-[var(--success)]" />
+              </span>
+
+              <span>
+                Browser-first processing. Your files stay under your control.
+              </span>
+            </div>
+
+            {/* Quick actions */}
+
+            <div className="mt-9 border-t border-[var(--border)] pt-5 sm:mt-10">
+              <div className="mb-3 flex items-center gap-2">
+                <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--text-subtle)]">
+                  Jump into a workflow
+                </span>
+
+                <span className="h-px flex-1 bg-[var(--border)]" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {QUICK_ACTIONS.map((action) => {
+                  const Icon = action.icon;
+
+                  return (
+                    <Link
+                      key={action.href}
+                      to={action.href}
+                      className="
+                        group
+                        flex
+                        min-w-0
+                        items-center
+                        gap-2.5
+                        rounded-xl
+                        border
+                        border-[var(--border)]
+                        bg-[var(--surface)]/60
+                        px-2.5
+                        py-2.5
+                        backdrop-blur
+                        transition-all
+                        duration-200
+                        hover:-translate-y-0.5
+                        hover:border-[var(--border-brand)]
+                        hover:bg-[var(--surface)]
+                        hover:shadow-[var(--shadow-sm)]
+                      "
+                    >
+                      <span
+                        className="
+                          flex
+                          h-8
+                          w-8
+                          shrink-0
+                          items-center
+                          justify-center
+                          rounded-lg
+                          bg-[var(--surface-muted)]
+                          text-[var(--text-secondary)]
+                          transition-all
+                          duration-200
+                          group-hover:bg-[var(--surface-brand)]
+                          group-hover:text-[var(--brand)]
+                        "
+                      >
+                        <Icon size={14} strokeWidth={1.8} />
+                      </span>
+
+                      <span className="min-w-0">
+                        <span className="block truncate text-[10px] font-semibold text-[var(--text)]">
+                          {action.label}
+                        </span>
+
+                        <span className="mt-0.5 block truncate text-[8px] text-[var(--text-muted)]">
+                          {action.description}
+                        </span>
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* =================================================
+              RIGHT — PRODUCT WORKSPACE
+              ================================================= */}
+
+          <div className="relative pt-4 lg:pt-0">
+            <WorkspacePreview />
+          </div>
         </div>
 
-        {/* =================================================
-            Upload workspace
-            ================================================= */}
+        {/* ===================================================
+            UPLOAD STRIP
+            =================================================== */}
 
-        <div className="mx-auto mt-7 max-w-4xl sm:mt-8">
+        <div className="mt-12 lg:mt-16">
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/png,image/jpeg,image/webp,image/svg+xml,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            accept="
+              image/png,
+              image/jpeg,
+              image/webp,
+              image/svg+xml,
+              application/pdf,
+              application/vnd.openxmlformats-officedocument.wordprocessingml.document
+            "
             onChange={handleInputChange}
             className="hidden"
           />
@@ -278,259 +1217,164 @@ export default function HeroSection() {
               overflow-hidden
               rounded-2xl
               border
-              p-2
+              p-1.5
               transition-all
               duration-300
               sm:rounded-3xl
-              sm:p-3
+              sm:p-2
               ${
                 dragging
                   ? "border-[var(--brand)] bg-[var(--surface-brand)] shadow-[var(--shadow-brand)]"
-                  : "border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-lg)]"
+                  : "border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-md)]"
               }
             `}
           >
-            {/* Inner glow */}
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-x-16 top-0 h-px bg-[var(--brand)]/30 blur-sm"
-            />
-
             <div
               className="
                 relative
+                flex
+                flex-col
+                gap-5
                 rounded-xl
                 border
                 border-dashed
                 border-[var(--border-strong)]
                 bg-[var(--surface-subtle)]
-                px-5
-                py-8
-                text-center
+                px-4
+                py-4
                 transition-colors
                 group-hover:bg-[var(--surface)]
+                sm:flex-row
+                sm:items-center
+                sm:justify-between
                 sm:rounded-2xl
-                sm:px-8
-                sm:py-10
+                sm:px-5
+                sm:py-4
               "
             >
-              <div className="mx-auto flex max-w-md flex-col items-center">
-                <div className="relative">
-                  <div className="absolute inset-0 rounded-2xl bg-[var(--brand)]/15 blur-xl" />
+              <div className="flex min-w-0 items-center gap-3">
+                <span
+                  className="
+                    flex
+                    h-10
+                    w-10
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-xl
+                    border
+                    border-[var(--border)]
+                    bg-[var(--surface)]
+                    text-[var(--brand)]
+                    shadow-[var(--shadow-xs)]
+                  "
+                >
+                  <Upload size={17} />
+                </span>
 
-                  <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-[var(--brand)] shadow-[var(--shadow-sm)]">
-                    <Upload size={22} strokeWidth={1.8} aria-hidden="true" />
-                  </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-[var(--text)] sm:text-sm">
+                    Drop anything you want to work with
+                  </p>
+
+                  <p className="mt-0.5 truncate text-[10px] text-[var(--text-muted)] sm:text-[11px]">
+                    Images, icons, PDFs and supported documents
+                  </p>
                 </div>
+              </div>
 
-                <p className="mt-5 text-sm font-semibold text-[var(--text)] sm:text-base">
-                  Drop a file here to get started
-                </p>
-
-                <p className="mt-1.5 max-w-sm text-xs leading-5 text-[var(--text-muted)] sm:text-sm">
-                  Images, icons, PDFs and supported documents. Everything stays
-                  under your control.
-                </p>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  {SUPPORTED_FORMATS.map((format) => (
+                    <span
+                      key={format}
+                      className="
+                        rounded-md
+                        bg-[var(--surface-muted)]
+                        px-1.5
+                        py-1
+                        font-mono
+                        text-[8px]
+                        font-medium
+                        text-[var(--text-muted)]
+                      "
+                    >
+                      {format}
+                    </span>
+                  ))}
+                </div>
 
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="
-                    mt-6
                     inline-flex
-                    h-11
+                    h-9
+                    shrink-0
                     items-center
                     justify-center
                     gap-2
-                    rounded-xl
-                    bg-[var(--brand)]
-                    px-5
-                    text-sm
+                    rounded-lg
+                    border
+                    border-[var(--border)]
+                    bg-[var(--surface)]
+                    px-3.5
+                    text-[11px]
                     font-semibold
-                    text-white
-                    shadow-[var(--shadow-brand)]
+                    text-[var(--text)]
+                    shadow-[var(--shadow-xs)]
                     transition-all
-                    duration-200
-                    hover:bg-[var(--brand-hover)]
-                    hover:shadow-[var(--shadow-lg)]
-                    active:translate-y-px
-                    focus-visible:outline-none
-                    focus-visible:ring-2
-                    focus-visible:ring-[var(--brand)]
-                    focus-visible:ring-offset-2
-                    focus-visible:ring-offset-[var(--surface)]
+                    hover:border-[var(--border-brand)]
+                    hover:bg-[var(--surface-brand)]
+                    hover:text-[var(--brand)]
                   "
                 >
-                  <Upload size={15} />
-                  Choose a file
-                  <ArrowRight size={15} />
+                  Choose file
+                  <ArrowRight size={12} />
                 </button>
-
-                <div className="mt-5 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5">
-                  {SUPPORTED_FORMATS.map((format, index) => (
-                    <span
-                      key={format}
-                      className="inline-flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.08em] text-[var(--text-subtle)] sm:text-[10px]"
-                    >
-                      {index > 0 && (
-                        <span
-                          aria-hidden="true"
-                          className="h-1 w-1 rounded-full bg-[var(--border-strong)]"
-                        />
-                      )}
-
-                      {format}
-                    </span>
-                  ))}
-                </div>
               </div>
             </div>
           </div>
-
-          {/* Privacy + alternate action */}
-          <div className="mt-4 flex flex-col items-center justify-between gap-3 px-1 sm:flex-row">
-            <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
-              <Lock size={12} className="text-[var(--success)]" />
-
-              <span>
-                Browser-first processing means your files don't need to leave
-                your device.
-              </span>
-            </div>
-
-            <Link
-              to="/inspect"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:text-[var(--brand)]"
-            >
-              <Globe2 size={14} />
-              Inspect a website
-              <ArrowRight size={13} />
-            </Link>
-          </div>
         </div>
 
-        {/* =================================================
-            Product capability strip
-            ================================================= */}
+        {/* ===================================================
+            TRUST / CAPABILITY BAR
+            =================================================== */}
 
-        <div className="mx-auto mt-12 max-w-4xl border-y border-[var(--border)] py-4 sm:mt-14">
-          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 sm:gap-x-7">
+        <div
+          className="
+            mt-7
+            flex
+            flex-col
+            gap-4
+            border-t
+            border-[var(--border)]
+            pt-5
+            sm:flex-row
+            sm:items-center
+            sm:justify-between
+          "
+        >
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
             {TRUST_ITEMS.map((item) => (
-              <div key={item} className="flex items-center gap-2">
-                <Check size={13} className="text-[var(--brand)]" />
+              <div key={item} className="flex items-center gap-1.5">
+                <Check
+                  size={11}
+                  strokeWidth={2.5}
+                  className="text-[var(--brand)]"
+                />
 
-                <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-muted)] sm:text-[11px]">
+                <span className="text-[9px] font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
                   {item}
                 </span>
               </div>
             ))}
           </div>
-        </div>
 
-        {/* =================================================
-            Product preview
-            ================================================= */}
+          <div className="flex items-center gap-2 text-[9px] font-medium text-[var(--text-subtle)]">
+            <FileText size={11} />
 
-        <div className="mx-auto mt-14 max-w-5xl sm:mt-16 lg:mt-20">
-          <div className="mb-4 flex items-end justify-between gap-4 px-1">
-            <div>
-              <div className="flex items-center gap-2">
-                <Zap size={13} className="text-[var(--brand)]" />
-
-                <p className="text-xs font-semibold text-[var(--text)]">
-                  One workspace. Multiple workflows.
-                </p>
-              </div>
-
-              <p className="mt-1 text-[11px] text-[var(--text-muted)]">
-                Designed to feel like a serious developer tool, without the
-                complexity.
-              </p>
-            </div>
-
-            <div className="hidden items-center gap-2 sm:flex">
-              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[var(--surface-muted)] text-[var(--text-secondary)]">
-                <FileText size={12} />
-              </span>
-
-              <span className="text-[10px] font-medium text-[var(--text-muted)]">
-                Asset workspace
-              </span>
-            </div>
-          </div>
-
-          <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-xl)] sm:rounded-3xl">
-            {/* Browser chrome */}
-            <div className="flex h-10 items-center justify-between border-b border-[var(--border)] bg-[var(--surface-subtle)] px-4 sm:h-11 sm:px-5">
-              <div className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-[var(--border-strong)]" />
-                <span className="h-2 w-2 rounded-full bg-[var(--border-strong)]" />
-                <span className="h-2 w-2 rounded-full bg-[var(--border-strong)]" />
-              </div>
-
-              <div className="hidden items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-1 sm:flex">
-                <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
-
-                <span className="font-mono text-[9px] text-[var(--text-muted)]">
-                  local workspace
-                </span>
-              </div>
-
-              <div className="w-8" />
-            </div>
-
-            {/* Application header */}
-            <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3 sm:px-6">
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--brand)] text-white">
-                  <Sparkles size={14} />
-                </div>
-
-                <div>
-                  <p className="text-[11px] font-semibold text-[var(--text)]">
-                    Asset workspace
-                  </p>
-
-                  <p className="text-[9px] text-[var(--text-muted)]">
-                    Untitled project
-                  </p>
-                </div>
-              </div>
-
-              <div className="hidden items-center gap-2 sm:flex">
-                {["Create", "Edit", "Convert", "Inspect"].map((item) => (
-                  <span
-                    key={item}
-                    className="rounded-md px-2 py-1 text-[9px] font-medium text-[var(--text-muted)]"
-                  >
-                    {item}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Preview area */}
-            <div className="bg-[var(--editor-workspace)] px-4 py-5 sm:px-8 sm:py-8">
-              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)] sm:rounded-2xl sm:p-6">
-                <div className="mb-5 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-semibold text-[var(--text)]">
-                      Icon & asset generation
-                    </p>
-
-                    <p className="mt-1 text-[10px] text-[var(--text-muted)]">
-                      Preview, inspect and prepare production assets.
-                    </p>
-                  </div>
-
-                  <span className="hidden rounded-md bg-[var(--success-bg)] px-2 py-1 text-[9px] font-semibold text-[var(--success)] sm:block">
-                    READY
-                  </span>
-                </div>
-
-                <IconSpecimenStrip className="justify-center" />
-              </div>
-            </div>
+            <span>One workspace. Multiple workflows.</span>
           </div>
         </div>
       </div>
