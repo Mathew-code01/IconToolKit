@@ -1,34 +1,19 @@
 // src/components/navigation/MobileNav.tsx
 
-// src/components/navigation/MobileNav.tsx
-// src/components/navigation/MobileNav.tsx
-
-import { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { toolCategories } from "./navigation";
+import { primaryNavigation, toolCategories } from "./navigation";
 
 interface MobileNavProps {
   open: boolean;
   onClose: () => void;
 }
 
-export default function MobileNav({
-  open,
-  onClose,
-}: MobileNavProps) {
-  const [expandedCategory, setExpandedCategory] = useState<string | null>(
-    null,
-  );
+export default function MobileNav({ open, onClose }: MobileNavProps) {
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
-  /*
-   * Lock page scrolling while the mobile navigation is open.
-   *
-   * This effect only synchronizes React state with the browser DOM.
-   * It does not update React state, which keeps it compatible with
-   * React's set-state-in-effect lint rule.
-   */
   useEffect(() => {
     if (!open) {
       document.body.style.overflow = "";
@@ -42,21 +27,13 @@ export default function MobileNav({
     };
   }, [open]);
 
-  /*
-   * Close the menu and clear the currently expanded category.
-   *
-   * Keeping this state update inside the user interaction handler
-   * avoids calling setState synchronously from an effect.
-   */
   const handleClose = () => {
     setExpandedCategory(null);
     onClose();
   };
 
   const toggleCategory = (href: string) => {
-    setExpandedCategory((current) =>
-      current === href ? null : href,
-    );
+    setExpandedCategory((current) => (current === href ? null : href));
   };
 
   if (!open) {
@@ -65,354 +42,426 @@ export default function MobileNav({
 
   return (
     <div
+      id="mobile-navigation"
       className="
         fixed
-        inset-0
-        top-16
+        inset-x-0
+        bottom-0
+        top-[72px]
         z-40
         bg-[var(--background)]
         lg:hidden
       "
     >
-      <div className="flex h-full flex-col overflow-y-auto">
-        {/* Menu header */}
+      <div
+        className="
+          absolute
+          inset-0
+          overflow-y-auto
+        "
+      >
+        {/* Background glow */}
         <div
           className="
-            flex
-            items-center
-            justify-between
-            border-b
-            border-[var(--border)]
-            px-4
-            py-3
-            sm:px-6
+            pointer-events-none
+            absolute
+            left-1/2
+            top-0
+            h-64
+            w-[80%]
+            -translate-x-1/2
+            bg-[var(--brand-gradient-soft)]
+            opacity-80
+            blur-3xl
           "
-        >
-          <div>
-            <p
-              className="
-                text-sm
-                font-semibold
-                text-[var(--text)]
-              "
-            >
-              Toolkit
-            </p>
+          aria-hidden="true"
+        />
 
-            <p
-              className="
-                mt-0.5
-                text-xs
-                text-[var(--text-muted)]
-              "
-            >
-              Choose a tool category
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleClose}
-            aria-label="Close navigation menu"
+        <div className="relative mx-auto flex min-h-full w-full max-w-2xl flex-col">
+          {/* Header */}
+          <div
             className="
-              flex
-              h-9
-              w-9
-              items-center
-              justify-center
-              rounded-lg
-              border
-              border-[var(--border)]
-              bg-[var(--surface)]
-              text-[var(--text-secondary)]
-              transition-colors
-              hover:bg-[var(--surface-muted)]
-              hover:text-[var(--text)]
-              focus-visible:outline-none
-              focus-visible:ring-2
-              focus-visible:ring-[#6366F1]
-            "
-          >
-            <X
-              size={18}
-              strokeWidth={2}
-              aria-hidden="true"
-            />
-          </button>
-        </div>
-
-        {/* Navigation */}
-        <nav
-          aria-label="Mobile navigation"
-          className="
-            mx-auto
-            w-full
-            max-w-2xl
-            px-4
-            py-5
-            sm:px-6
-          "
-        >
-          {/* Generator */}
-          <Link
-            to="/generator"
-            onClick={handleClose}
-            className="
-              mb-2
               flex
               items-center
               justify-between
-              rounded-xl
-              border
+              border-b
               border-[var(--border)]
-              bg-[var(--surface)]
               px-4
-              py-3.5
-              text-sm
-              font-semibold
-              text-[var(--text)]
-              transition-colors
-              hover:bg-[var(--surface-muted)]
-              focus-visible:outline-none
-              focus-visible:ring-2
-              focus-visible:ring-[#6366F1]
+              py-4
+              sm:px-6
             "
           >
-            <span>Favicon Generator</span>
-
-            <ChevronRight
-              size={17}
-              className="text-[var(--text-muted)]"
-              aria-hidden="true"
-            />
-          </Link>
-
-          {/* Categories */}
-          <div className="space-y-2">
-            {toolCategories.map((category) => {
-              const Icon = category.icon;
-              const expanded =
-                expandedCategory === category.href;
-
-              return (
-                <div
-                  key={category.href}
+            <div>
+              <div
+                className="
+                  flex
+                  items-center
+                  gap-2
+                "
+              >
+                <span
                   className="
-                    overflow-hidden
-                    rounded-xl
-                    border
-                    border-[var(--border)]
-                    bg-[var(--surface)]
+                    h-2
+                    w-2
+                    rounded-full
+                    bg-[var(--brand)]
+                  "
+                  aria-hidden="true"
+                />
+
+                <p
+                  className="
+                    text-sm
+                    font-bold
+                    text-[var(--text)]
                   "
                 >
-                  {/* Category trigger */}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      toggleCategory(category.href)
-                    }
-                    aria-expanded={expanded}
-                    aria-controls={`mobile-category-${category.href.replace(
-                      "/",
-                      "",
-                    )}`}
+                  IconToolkit
+                </p>
+              </div>
+
+              <p
+                className="
+                  mt-1
+                  text-xs
+                  text-[var(--text-muted)]
+                "
+              >
+                Digital asset tools for creators and developers.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleClose}
+              aria-label="Close navigation menu"
+              className="
+                inline-flex
+                h-10
+                w-10
+                items-center
+                justify-center
+                rounded-xl
+                border
+                border-[var(--border)]
+                bg-[var(--surface)]
+                text-[var(--text-secondary)]
+                shadow-[var(--shadow-xs)]
+                transition-all
+                hover:border-[var(--border-strong)]
+                hover:bg-[var(--surface-hover)]
+                hover:text-[var(--text)]
+                focus-visible:outline-none
+                focus-visible:ring-2
+                focus-visible:ring-[var(--brand)]
+              "
+            >
+              <X size={18} strokeWidth={2} aria-hidden="true" />
+            </button>
+          </div>
+
+          {/* Navigation */}
+          <nav
+            aria-label="Mobile navigation"
+            className="
+              flex-1
+              px-4
+              py-5
+              sm:px-6
+            "
+          >
+            {/* Primary links */}
+            <div className="mb-5 grid grid-cols-2 gap-2">
+              {primaryNavigation.map((item) => {
+                if (!item.href) {
+                  return null;
+                }
+
+                return (
+                  <Link
+                    key={item.href}
+                    to={item.href}
+                    onClick={handleClose}
                     className="
                       flex
-                      w-full
                       items-center
                       justify-between
+                      rounded-xl
+                      border
+                      border-[var(--border)]
+                      bg-[var(--surface)]
                       px-4
                       py-3.5
-                      text-left
-                      transition-colors
-                      hover:bg-[var(--surface-muted)]
+                      text-sm
+                      font-semibold
+                      text-[var(--text)]
+                      shadow-[var(--shadow-xs)]
+                      transition-all
+                      hover:border-[var(--border-brand)]
+                      hover:bg-[var(--surface-brand)]
+                      hover:text-[var(--brand)]
                       focus-visible:outline-none
                       focus-visible:ring-2
-                      focus-visible:ring-inset
-                      focus-visible:ring-[#6366F1]
+                      focus-visible:ring-[var(--brand)]
                     "
                   >
-                    <span className="flex items-center gap-3">
-                      <span
-                        className="
-                          flex
-                          h-8
-                          w-8
-                          items-center
-                          justify-center
-                          rounded-lg
-                          bg-[var(--surface-muted)]
-                          text-[var(--text-secondary)]
-                        "
-                      >
-                        <Icon
-                          size={16}
-                          strokeWidth={1.8}
-                          aria-hidden="true"
-                        />
-                      </span>
+                    <span>{item.label}</span>
 
-                      <span>
-                        <span
-                          className="
-                            block
-                            text-sm
-                            font-semibold
-                            text-[var(--text)]
-                          "
-                        >
-                          {category.label}
-                        </span>
-
-                        <span
-                          className="
-                            block
-                            text-xs
-                            text-[var(--text-muted)]
-                          "
-                        >
-                          {category.description}
-                        </span>
-                      </span>
-                    </span>
-
-                    <ChevronDown
-                      size={17}
-                      className={`
-                        shrink-0
-                        text-[var(--text-muted)]
-                        transition-transform
-                        duration-200
-                        ${
-                          expanded
-                            ? "rotate-180"
-                            : ""
-                        }
-                      `}
+                    <ChevronRight
+                      size={16}
+                      className="text-[var(--text-subtle)]"
                       aria-hidden="true"
                     />
-                  </button>
+                  </Link>
+                );
+              })}
+            </div>
 
-                  {/* Expanded category */}
-                  {expanded && (
-                    <div
-                      id={`mobile-category-${category.href.replace(
-                        "/",
-                        "",
-                      )}`}
+            {/* Section heading */}
+            <div className="mb-3">
+              <p
+                className="
+                  text-[11px]
+                  font-bold
+                  uppercase
+                  tracking-[0.12em]
+                  text-[var(--text-subtle)]
+                "
+              >
+                Tool categories
+              </p>
+            </div>
+
+            {/* Categories */}
+            <div className="space-y-2">
+              {toolCategories.map((category) => {
+                const Icon = category.icon;
+
+                const expanded = expandedCategory === category.href;
+
+                const categoryId = `mobile-category-${category.href
+                  .replace(/\//g, "-")
+                  .replace(/^-/, "")}`;
+
+                return (
+                  <div
+                    key={category.href}
+                    className="
+                      overflow-hidden
+                      rounded-xl
+                      border
+                      border-[var(--border)]
+                      bg-[var(--surface)]
+                      shadow-[var(--shadow-xs)]
+                    "
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleCategory(category.href)}
+                      aria-expanded={expanded}
+                      aria-controls={categoryId}
                       className="
-                        border-t
-                        border-[var(--border)]
+                        flex
+                        w-full
+                        items-center
+                        justify-between
                         px-4
-                        pb-4
-                        pt-2
+                        py-3.5
+                        text-left
+                        transition-colors
+                        hover:bg-[var(--surface-hover)]
+                        focus-visible:outline-none
+                        focus-visible:ring-2
+                        focus-visible:ring-inset
+                        focus-visible:ring-[var(--brand)]
                       "
                     >
-                      {/* View all */}
-                      <Link
-                        to={category.href}
-                        onClick={handleClose}
-                        className="
-                          mb-1
-                          flex
-                          items-center
-                          justify-between
-                          rounded-lg
-                          px-2
-                          py-2
-                          text-xs
-                          font-semibold
-                          text-[#6366F1]
-                          transition-colors
-                          hover:bg-[var(--surface-muted)]
-                        "
-                      >
-                        <span>
-                          View all {category.label} tools
-                        </span>
-
-                        <ChevronRight
-                          size={14}
-                          aria-hidden="true"
-                        />
-                      </Link>
-
-                      {/* Tools */}
-                      {category.tools.map((tool) => (
-                        <div
-                          key={tool}
+                      <span className="flex min-w-0 items-center gap-3">
+                        <span
                           className="
+                            flex
+                            h-9
+                            w-9
+                            shrink-0
+                            items-center
+                            justify-center
                             rounded-lg
-                            px-2
-                            py-2
-                            text-xs
-                            text-[var(--text-muted)]
+                            border
+                            border-[var(--border)]
+                            bg-[var(--surface-muted)]
+                            text-[var(--text-secondary)]
                           "
                         >
-                          {tool}
+                          <Icon
+                            size={17}
+                            strokeWidth={1.8}
+                            aria-hidden="true"
+                          />
+                        </span>
+
+                        <span className="min-w-0">
+                          <span
+                            className="
+                              block
+                              text-sm
+                              font-bold
+                              text-[var(--text)]
+                            "
+                          >
+                            {category.label}
+                          </span>
+
+                          <span
+                            className="
+                              mt-0.5
+                              block
+                              truncate
+                              text-xs
+                              text-[var(--text-muted)]
+                            "
+                          >
+                            {category.description}
+                          </span>
+                        </span>
+                      </span>
+
+                      <ChevronDown
+                        size={17}
+                        className={`
+                          ml-3
+                          shrink-0
+                          text-[var(--text-subtle)]
+                          transition-transform
+                          duration-200
+                          ${expanded ? "rotate-180 text-[var(--brand)]" : ""}
+                        `}
+                        aria-hidden="true"
+                      />
+                    </button>
+
+                    {expanded && (
+                      <div
+                        id={categoryId}
+                        className="
+                          border-t
+                          border-[var(--border)]
+                          bg-[var(--surface-subtle)]
+                          px-4
+                          pb-4
+                          pt-3
+                        "
+                      >
+                        <Link
+                          to={category.href}
+                          onClick={handleClose}
+                          className="
+                            mb-2
+                            flex
+                            items-center
+                            justify-between
+                            rounded-lg
+                            border
+                            border-[var(--border-brand)]
+                            bg-[var(--surface-brand)]
+                            px-3
+                            py-2.5
+                            text-xs
+                            font-bold
+                            text-[var(--brand)]
+                          "
+                        >
+                          <span>View all {category.label}</span>
+
+                          <ChevronRight size={14} aria-hidden="true" />
+                        </Link>
+
+                        <div className="grid grid-cols-1 gap-0.5">
+                          {category.tools.map((tool) => (
+                            <div
+                              key={tool}
+                              className="
+                                  rounded-lg
+                                  px-3
+                                  py-2
+                                  text-xs
+                                  text-[var(--text-muted)]
+                                "
+                            >
+                              {tool}
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </nav>
+
+          {/* Bottom CTA */}
+          <div
+            className="
+              sticky
+              bottom-0
+              border-t
+              border-[var(--border)]
+              bg-[var(--header-background)]
+              p-4
+              backdrop-blur-xl
+              sm:p-6
+            "
+          >
+            <Link
+              to="/generator"
+              onClick={handleClose}
+              className="
+                group
+                flex
+                h-12
+                w-full
+                items-center
+                justify-center
+                gap-2
+                rounded-xl
+                bg-[var(--brand-gradient)]
+                text-sm
+                font-bold
+                text-white
+                shadow-[var(--shadow-brand)]
+                transition-all
+                hover:-translate-y-px
+                active:translate-y-0
+                focus-visible:outline-none
+                focus-visible:ring-2
+                focus-visible:ring-[var(--brand)]
+                focus-visible:ring-offset-2
+                focus-visible:ring-offset-[var(--background)]
+              "
+            >
+              Create an icon
+              <ChevronRight
+                size={16}
+                className="
+                  transition-transform
+                  duration-200
+                  group-hover:translate-x-0.5
+                "
+                aria-hidden="true"
+              />
+            </Link>
+
+            <p
+              className="
+                mt-3
+                text-center
+                text-[11px]
+                text-[var(--text-subtle)]
+              "
+            >
+              Free browser-based tools · No account required
+            </p>
           </div>
-        </nav>
-
-        {/* Bottom CTA */}
-        <div
-          className="
-            mt-auto
-            border-t
-            border-[var(--border)]
-            p-4
-            sm:p-6
-          "
-        >
-          <Link
-            to="/generator"
-            onClick={handleClose}
-            className="
-              flex
-              h-11
-              w-full
-              items-center
-              justify-center
-              rounded-xl
-              bg-[#6366F1]
-              px-4
-              text-sm
-              font-semibold
-              text-white
-              shadow-[0_4px_14px_rgba(99,102,241,0.20)]
-              transition-all
-              duration-200
-              hover:bg-[#4F46E5]
-              hover:shadow-[0_6px_18px_rgba(99,102,241,0.25)]
-              active:translate-y-px
-              focus-visible:outline-none
-              focus-visible:ring-2
-              focus-visible:ring-[#6366F1]
-              focus-visible:ring-offset-2
-            "
-          >
-            Create an icon
-          </Link>
-
-          <p
-            className="
-              mx-auto
-              mt-3
-              max-w-md
-              text-center
-              text-[11px]
-              leading-5
-              text-[var(--text-muted)]
-            "
-          >
-            Free browser-based tools. No account required.
-          </p>
         </div>
       </div>
     </div>

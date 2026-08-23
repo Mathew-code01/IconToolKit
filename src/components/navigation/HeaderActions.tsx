@@ -1,6 +1,6 @@
 // src/components/navigation/HeaderActions.tsx
 
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import ThemeToggle from "./ThemeToggle";
@@ -14,34 +14,60 @@ export default function HeaderActions() {
         to="/generator"
         className="
           group
+          relative
           inline-flex
-          h-9
+          h-10
           items-center
           justify-center
-          gap-1.5
-          rounded-lg
-          bg-[#6366F1]
-          px-3.5
-          text-sm
-          font-semibold
+          gap-2
+          overflow-hidden
+          rounded-xl
+          bg-[var(--brand-gradient)]
+          px-4
+          text-[13px]
+          font-bold
           text-white
-          shadow-[0_3px_10px_rgba(99,102,241,0.18)]
+          shadow-[var(--shadow-brand)]
           transition-all
           duration-200
-          hover:bg-[#4F46E5]
-          hover:shadow-[0_5px_14px_rgba(99,102,241,0.25)]
-          active:translate-y-px
+          hover:-translate-y-px
+          hover:shadow-[0_10px_28px_rgba(79,70,229,0.30)]
+          active:translate-y-0
           focus-visible:outline-none
           focus-visible:ring-2
-          focus-visible:ring-[#6366F1]
+          focus-visible:ring-[var(--brand)]
           focus-visible:ring-offset-2
+          focus-visible:ring-offset-[var(--background)]
         "
       >
-        Create icon
+        <span
+          className="
+            pointer-events-none
+            absolute
+            inset-0
+            bg-white/10
+            opacity-0
+            transition-opacity
+            duration-200
+            group-hover:opacity-100
+          "
+          aria-hidden="true"
+        />
+
+        <Sparkles
+          size={14}
+          strokeWidth={2}
+          className="relative"
+          aria-hidden="true"
+        />
+
+        <span className="relative">Create icon</span>
+
         <ArrowUpRight
           size={14}
           strokeWidth={2}
           className="
+            relative
             transition-transform
             duration-200
             group-hover:translate-x-0.5

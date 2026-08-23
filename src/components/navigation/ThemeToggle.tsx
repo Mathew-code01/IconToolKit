@@ -1,6 +1,5 @@
 // src/components/navigation/ThemeToggle.tsx
 
-// src/components/navigation/ThemeToggle.tsx
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -32,6 +31,8 @@ export default function ThemeToggle() {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
 
+    document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+
     localStorage.setItem(STORAGE_KEY, theme);
   }, [isDark, theme]);
 
@@ -46,33 +47,65 @@ export default function ThemeToggle() {
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       title={isDark ? "Switch to light mode" : "Switch to dark mode"}
       className="
+        group
+        relative
         inline-flex
-        h-9
-        w-9
+        h-10
+        w-10
         items-center
         justify-center
-        rounded-lg
+        overflow-hidden
+        rounded-xl
         border
         border-[var(--border)]
         bg-[var(--surface)]
         text-[var(--text-secondary)]
+        shadow-[var(--shadow-xs)]
         transition-all
         duration-200
-        hover:border-[var(--border-strong)]
-        hover:bg-[var(--surface-muted)]
-        hover:text-[var(--text)]
+        hover:border-[var(--border-brand)]
+        hover:bg-[var(--surface-hover)]
+        hover:text-[var(--brand)]
         active:scale-95
         focus-visible:outline-none
         focus-visible:ring-2
-        focus-visible:ring-[#6366F1]
+        focus-visible:ring-[var(--brand)]
         focus-visible:ring-offset-2
+        focus-visible:ring-offset-[var(--background)]
       "
     >
-      {isDark ? (
-        <Sun size={17} strokeWidth={1.9} aria-hidden="true" />
-      ) : (
-        <Moon size={17} strokeWidth={1.9} aria-hidden="true" />
-      )}
+      <span
+        className="
+          absolute
+          inset-0
+          bg-[var(--brand-gradient-soft)]
+          opacity-0
+          transition-opacity
+          duration-200
+          group-hover:opacity-100
+        "
+        aria-hidden="true"
+      />
+
+      <span
+        className="
+          relative
+          z-10
+          transition-transform
+          duration-200
+          group-hover:rotate-6
+        "
+      >
+        {isDark ? (
+          <Sun size={17} strokeWidth={1.9} aria-hidden="true" />
+        ) : (
+          <Moon size={17} strokeWidth={1.9} aria-hidden="true" />
+        )}
+      </span>
+
+      <span className="sr-only">
+        {isDark ? "Switch to light mode" : "Switch to dark mode"}
+      </span>
     </button>
   );
 }
