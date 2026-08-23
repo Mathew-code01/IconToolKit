@@ -12,6 +12,7 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
     "exifreader": "^4.42.0",
+    "framer-motion": "^13.1.1",
     "gifuct-js": "^2.1.2",
     "html2canvas": "^1.4.1",
     "icojs": "^0.23.0",
