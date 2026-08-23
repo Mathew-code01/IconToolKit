@@ -1,105 +1,214 @@
 /* src/index.css */
+/* =========================================================
+   IconToolkit
+   Enterprise Design System
+   ========================================================= */
+
 @import "tailwindcss";
 
 /* =========================================================
-   IconToolkit Design System
+   ROOT / LIGHT THEME
    ========================================================= */
 
 :root {
   /* -------------------------------------------------------
      Brand
-  ------------------------------------------------------- */
-  --brand: #6366f1;
-  --brand-hover: #4f46e5;
+     ------------------------------------------------------- */
+
+  --brand: #4f46e5;
+  --brand-hover: #4338ca;
+  --brand-active: #3730a3;
+
+  --brand-secondary: #2563eb;
+  --brand-accent: #7c3aed;
+
   --brand-light: #eef2ff;
-  --brand-ring: rgba(99, 102, 241, 0.25);
+  --brand-lighter: #f5f7ff;
+
+  --brand-ring: rgba(79, 70, 229, 0.24);
+
+  --brand-gradient:
+    linear-gradient(
+      135deg,
+      #4f46e5 0%,
+      #2563eb 52%,
+      #7c3aed 100%
+    );
+
+  --brand-gradient-soft:
+    linear-gradient(
+      135deg,
+      rgba(79, 70, 229, 0.12),
+      rgba(37, 99, 235, 0.08),
+      rgba(124, 58, 237, 0.08)
+    );
 
   /* -------------------------------------------------------
-     General backgrounds
-  ------------------------------------------------------- */
-  --background: #f8fafc;
+     Background system
+     ------------------------------------------------------- */
+
+  --background: #f6f8fc;
+
   --surface: #ffffff;
-  --surface-subtle: #f8fafc;
-  --surface-muted: #f1f5f9;
+  --surface-raised: #ffffff;
+
+  --surface-subtle: #f8faff;
+  --surface-muted: #f1f4f9;
+  --surface-hover: #eef2f7;
+
+  --surface-brand: #eef2ff;
 
   /* -------------------------------------------------------
-     Text
-  ------------------------------------------------------- */
-  --text: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
-  --text-disabled: #94a3b8;
+     Text hierarchy
+     ------------------------------------------------------- */
+
+  --text: #101828;
+  --text-secondary: #344054;
+  --text-muted: #667085;
+  --text-subtle: #98a2b3;
+  --text-disabled: #b8c0cc;
+  --text-inverse: #ffffff;
 
   /* -------------------------------------------------------
      Borders
-  ------------------------------------------------------- */
-  --border: #e2e8f0;
-  --border-strong: #cbd5e1;
+     ------------------------------------------------------- */
+
+  --border: #e4e7ec;
+  --border-subtle: #eaecf0;
+  --border-strong: #d0d5dd;
+
+  --border-brand: rgba(79, 70, 229, 0.3);
+
+  /* -------------------------------------------------------
+     Navigation
+     ------------------------------------------------------- */
+
+  --header-background: rgba(255, 255, 255, 0.88);
+  --header-border: rgba(228, 231, 236, 0.9);
+
+  --nav-text: #475467;
+  --nav-text-hover: #101828;
+
+  --nav-hover: #f2f4f7;
+  --nav-active: #eef2ff;
+  --nav-active-text: #4338ca;
 
   /* -------------------------------------------------------
      Status
-  ------------------------------------------------------- */
-  --success: #16a34a;
-  --success-bg: #f0fdf4;
+     ------------------------------------------------------- */
 
-  --warning: #d97706;
-  --warning-bg: #fffbeb;
+  --success: #12b76a;
+  --success-bg: #ecfdf3;
+  --success-border: #abefc6;
 
-  --error: #dc2626;
-  --error-bg: #fef2f2;
+  --warning: #f79009;
+  --warning-bg: #fffaeb;
+  --warning-border: #fedf89;
 
-  --info: #2563eb;
-  --info-bg: #eff6ff;
+  --error: #f04438;
+  --error-bg: #fef3f2;
+  --error-border: #fecdca;
+
+  --info: #2e90fa;
+  --info-bg: #eff8ff;
+  --info-border: #b2ddff;
 
   /* -------------------------------------------------------
      Code
-  ------------------------------------------------------- */
-  --code-background: #f1f5f9;
+     ------------------------------------------------------- */
+
+  --code-background: #f2f4f7;
+  --code-text: #344054;
 
   /* -------------------------------------------------------
-     Create Editor
-  ------------------------------------------------------- */
+     Editor
+     ------------------------------------------------------- */
+
   --editor-header: #ffffff;
   --editor-panel: #ffffff;
   --editor-panel-alt: #f8fafc;
-  --editor-workspace: #eef1f5;
-  --editor-grid: rgba(15, 23, 42, 0.055);
+  --editor-workspace: #eef2f6;
+
+  --editor-grid: rgba(16, 24, 40, 0.055);
   --editor-grid-size: 24px;
-  --editor-shadow: rgba(15, 23, 42, 0.16);
+
+  --editor-shadow: rgba(16, 24, 40, 0.14);
 
   /* -------------------------------------------------------
-     Create Toolbar
-  ------------------------------------------------------- */
-  --toolbar-icon: #64748b;
-  --toolbar-icon-hover: #0f172a;
-  --toolbar-hover: rgba(15, 23, 42, 0.06);
-  --toolbar-active: #6366f1;
+     Toolbar
+     ------------------------------------------------------- */
+
+  --toolbar-icon: #667085;
+  --toolbar-icon-hover: #101828;
+
+  --toolbar-hover: #f2f4f7;
+
+  --toolbar-active: #4f46e5;
   --toolbar-active-text: #ffffff;
 
   /* -------------------------------------------------------
      Tooltip
-  ------------------------------------------------------- */
-  --tooltip-background: #ffffff;
-  --tooltip-border: #e2e8f0;
-  --tooltip-text: #0f172a;
+     ------------------------------------------------------- */
+
+  --tooltip-background: #101828;
+  --tooltip-border: #344054;
+  --tooltip-text: #ffffff;
 
   /* -------------------------------------------------------
      Canvas
-  ------------------------------------------------------- */
+     ------------------------------------------------------- */
+
   --canvas-background: #ffffff;
-  --canvas-border: #cbd5e1;
+  --canvas-border: #d0d5dd;
+
+  /* -------------------------------------------------------
+     Shadows
+     ------------------------------------------------------- */
+
+  --shadow-xs:
+    0 1px 2px rgba(16, 24, 40, 0.04);
+
+  --shadow-sm:
+    0 1px 3px rgba(16, 24, 40, 0.08),
+    0 1px 2px rgba(16, 24, 40, 0.04);
+
+  --shadow-md:
+    0 4px 12px rgba(16, 24, 40, 0.08),
+    0 2px 4px rgba(16, 24, 40, 0.04);
+
+  --shadow-lg:
+    0 12px 32px rgba(16, 24, 40, 0.12),
+    0 4px 12px rgba(16, 24, 40, 0.06);
+
+  --shadow-xl:
+    0 24px 60px rgba(16, 24, 40, 0.16);
+
+  --shadow-brand:
+    0 8px 24px rgba(79, 70, 229, 0.22);
 
   /* -------------------------------------------------------
      Radius
-  ------------------------------------------------------- */
+     ------------------------------------------------------- */
+
+  --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-3xl: 24px;
+
+  /* -------------------------------------------------------
+     Layout
+     ------------------------------------------------------- */
+
+  --header-height: 72px;
+  --content-max-width: 1440px;
 
   /* -------------------------------------------------------
      Typography
-  ------------------------------------------------------- */
+     ------------------------------------------------------- */
+
   --font-sans:
     Inter,
     ui-sans-serif,
@@ -110,25 +219,17 @@
     sans-serif;
 
   --font-mono:
-    ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    Monaco,
+    "SFMono-Regular",
     Consolas,
     "Liberation Mono",
+    Menlo,
+    Monaco,
+    ui-monospace,
     monospace;
 
   /* -------------------------------------------------------
-     Shadows
-  ------------------------------------------------------- */
-  --shadow-sm:
-    0 1px 2px rgba(15, 23, 42, 0.05);
-
-  --shadow-md:
-    0 4px 12px rgba(15, 23, 42, 0.08);
-
-  --shadow-lg:
-    0 10px 25px rgba(15, 23, 42, 0.1);
+     Rendering
+     ------------------------------------------------------- */
 
   font-family: var(--font-sans);
   line-height: 1.5;
@@ -147,130 +248,230 @@
    DARK THEME
    ========================================================= */
 
-/* =========================================================
-   DARK THEME
-   ========================================================= */
-
 html.dark {
   color-scheme: dark;
 }
 
+html.dark,
 .dark {
   /* -------------------------------------------------------
      Brand
-  ------------------------------------------------------- */
-  --brand: #a5b4fc;
-  --brand-hover: #c7d2fe;
-  --brand-light: rgba(165, 180, 252, 0.14);
-  --brand-ring: rgba(165, 180, 252, 0.28);
+     ------------------------------------------------------- */
+
+  --brand: #818cf8;
+  --brand-hover: #a5b4fc;
+  --brand-active: #c7d2fe;
+
+  --brand-secondary: #60a5fa;
+  --brand-accent: #a78bfa;
+
+  --brand-light: rgba(129, 140, 248, 0.14);
+  --brand-lighter: rgba(129, 140, 248, 0.08);
+
+  --brand-ring: rgba(129, 140, 248, 0.3);
+
+  --brand-gradient:
+    linear-gradient(
+      135deg,
+      #818cf8 0%,
+      #60a5fa 52%,
+      #a78bfa 100%
+    );
+
+  --brand-gradient-soft:
+    linear-gradient(
+      135deg,
+      rgba(129, 140, 248, 0.14),
+      rgba(96, 165, 250, 0.09),
+      rgba(167, 139, 250, 0.09)
+    );
 
   /* -------------------------------------------------------
-     General backgrounds
-     Deliberately separated into clear visual layers
-  ------------------------------------------------------- */
-  --background: #090c11;
-  --surface: #11161f;
-  --surface-subtle: #161c26;
-  --surface-muted: #1d2531;
+     Background hierarchy
+     ------------------------------------------------------- */
+
+  --background: #080b12;
+
+  --surface: #0f141d;
+  --surface-raised: #131a25;
+
+  --surface-subtle: #111822;
+  --surface-muted: #18202c;
+  --surface-hover: #1d2633;
+
+  --surface-brand: rgba(129, 140, 248, 0.11);
 
   /* -------------------------------------------------------
      Text
      ------------------------------------------------------- */
+
   --text: #f8fafc;
-  --text-secondary: #d1d9e6;
-  --text-muted: #a5b0c0;
-  --text-disabled: #6f7b8d;
+  --text-secondary: #d0d5dd;
+  --text-muted: #98a2b3;
+  --text-subtle: #667085;
+  --text-disabled: #475467;
+  --text-inverse: #0b0f17;
 
   /* -------------------------------------------------------
      Borders
      ------------------------------------------------------- */
-  --border: #293241;
-  --border-strong: #3a4658;
+
+  --border: #252d3a;
+  --border-subtle: #1d2530;
+  --border-strong: #344054;
+
+  --border-brand: rgba(129, 140, 248, 0.34);
+
+  /* -------------------------------------------------------
+     Navigation
+     ------------------------------------------------------- */
+
+  --header-background: rgba(8, 11, 18, 0.86);
+  --header-border: rgba(37, 45, 58, 0.9);
+
+  --nav-text: #aab4c3;
+  --nav-text-hover: #f8fafc;
+
+  --nav-hover: rgba(255, 255, 255, 0.055);
+  --nav-active: rgba(129, 140, 248, 0.13);
+  --nav-active-text: #a5b4fc;
 
   /* -------------------------------------------------------
      Status
      ------------------------------------------------------- */
-  --success: #4ade80;
-  --success-bg: rgba(74, 222, 128, 0.11);
 
-  --warning: #fbbf24;
-  --warning-bg: rgba(251, 191, 36, 0.11);
+  --success: #32d583;
+  --success-bg: rgba(50, 213, 131, 0.1);
+  --success-border: rgba(50, 213, 131, 0.24);
 
-  --error: #fb7185;
-  --error-bg: rgba(251, 113, 133, 0.11);
+  --warning: #fdb022;
+  --warning-bg: rgba(253, 176, 34, 0.1);
+  --warning-border: rgba(253, 176, 34, 0.24);
 
-  --info: #60a5fa;
-  --info-bg: rgba(96, 165, 250, 0.11);
+  --error: #f97066;
+  --error-bg: rgba(249, 112, 102, 0.1);
+  --error-border: rgba(249, 112, 102, 0.24);
+
+  --info: #53b1fd;
+  --info-bg: rgba(83, 177, 253, 0.1);
+  --info-border: rgba(83, 177, 253, 0.24);
 
   /* -------------------------------------------------------
      Code
      ------------------------------------------------------- */
-  --code-background: #171e28;
+
+  --code-background: #151c27;
+  --code-text: #d0d5dd;
 
   /* -------------------------------------------------------
-     Create Editor
+     Editor
      ------------------------------------------------------- */
-  --editor-header: #11161f;
-  --editor-panel: #141a24;
-  --editor-panel-alt: #0f141c;
-  --editor-workspace: #0a0e14;
-  --editor-grid: rgba(255, 255, 255, 0.028);
+
+  --editor-header: #0f141d;
+  --editor-panel: #121923;
+  --editor-panel-alt: #0c1119;
+  --editor-workspace: #080c12;
+
+  --editor-grid: rgba(255, 255, 255, 0.035);
   --editor-grid-size: 24px;
-  --editor-shadow: rgba(0, 0, 0, 0.45);
+
+  --editor-shadow: rgba(0, 0, 0, 0.5);
 
   /* -------------------------------------------------------
-     Create Toolbar
+     Toolbar
      ------------------------------------------------------- */
-  --toolbar-icon: #a5b0c0;
+
+  --toolbar-icon: #98a2b3;
   --toolbar-icon-hover: #ffffff;
-  --toolbar-hover: rgba(255, 255, 255, 0.07);
-  --toolbar-active: #a5b4fc;
+
+  --toolbar-hover: rgba(255, 255, 255, 0.06);
+
+  --toolbar-active: #818cf8;
   --toolbar-active-text: #ffffff;
 
   /* -------------------------------------------------------
      Tooltip
      ------------------------------------------------------- */
-  --tooltip-background: #181f2a;
-  --tooltip-border: #3a4658;
-  --tooltip-text: #f8fafc;
+
+  --tooltip-background: #f8fafc;
+  --tooltip-border: #d0d5dd;
+  --tooltip-text: #101828;
 
   /* -------------------------------------------------------
      Canvas
      ------------------------------------------------------- */
-  --canvas-background: #171e28;
-  --canvas-border: #3a4658;
+
+  --canvas-background: #151c27;
+  --canvas-border: #344054;
 
   /* -------------------------------------------------------
      Shadows
      ------------------------------------------------------- */
+
+  --shadow-xs:
+    0 1px 2px rgba(0, 0, 0, 0.35);
+
   --shadow-sm:
-    0 1px 2px rgba(0, 0, 0, 0.38);
+    0 2px 6px rgba(0, 0, 0, 0.38);
 
   --shadow-md:
-    0 4px 14px rgba(0, 0, 0, 0.42);
+    0 6px 18px rgba(0, 0, 0, 0.42);
 
   --shadow-lg:
-    0 12px 30px rgba(0, 0, 0, 0.52);
+    0 16px 40px rgba(0, 0, 0, 0.5);
+
+  --shadow-xl:
+    0 28px 70px rgba(0, 0, 0, 0.6);
+
+  --shadow-brand:
+    0 10px 30px rgba(99, 102, 241, 0.28);
 }
 
 /* =========================================================
-   BASE
+   DOCUMENT
    ========================================================= */
 
 html {
   min-width: 320px;
   min-height: 100%;
+
   background: var(--background);
   color: var(--text);
+
   color-scheme: light;
+
+  scroll-behavior: smooth;
+}
+
+html.dark {
+  color-scheme: dark;
 }
 
 body {
   margin: 0;
+
   min-width: 320px;
   min-height: 100vh;
-  background: var(--background);
+
+  background:
+    radial-gradient(
+      circle at 50% -20%,
+      rgba(79, 70, 229, 0.035),
+      transparent 38%
+    ),
+    var(--background);
+
   color: var(--text);
+}
+
+html.dark body {
+  background:
+    radial-gradient(
+      circle at 50% -20%,
+      rgba(99, 102, 241, 0.09),
+      transparent 38%
+    ),
+    var(--background);
 }
 
 #root {
@@ -289,14 +490,25 @@ h4,
 h5,
 h6 {
   margin: 0;
+
   color: var(--text);
+
   font-family: var(--font-sans);
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-weight: 650;
+
+  letter-spacing: -0.025em;
 }
 
 p {
   margin: 0;
+}
+
+strong {
+  font-weight: 650;
+}
+
+small {
+  font-size: 0.875rem;
 }
 
 a {
@@ -324,11 +536,20 @@ textarea,
 select {
   color: var(--text);
   background: var(--surface);
+  border-color: var(--border);
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: var(--text-muted);
+  color: var(--text-subtle);
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled,
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 select option {
@@ -341,12 +562,17 @@ select option {
    ========================================================= */
 
 ::selection {
-  background: var(--brand-light);
+  background: rgba(79, 70, 229, 0.18);
   color: var(--text);
 }
 
+html.dark ::selection {
+  background: rgba(129, 140, 248, 0.24);
+  color: #ffffff;
+}
+
 /* =========================================================
-   SCROLLBARS
+   SCROLLBAR
    ========================================================= */
 
 * {
@@ -392,9 +618,12 @@ pre {
 
 code {
   border-radius: var(--radius-sm);
+
   background: var(--code-background);
-  color: var(--text);
+  color: var(--code-text);
+
   padding: 0.2rem 0.4rem;
+
   font-size: 0.875em;
 }
 
@@ -403,13 +632,50 @@ pre {
 }
 
 /* =========================================================
-   IMAGES
+   MEDIA
    ========================================================= */
 
 img,
-svg {
+svg,
+video,
+canvas {
   display: block;
   max-width: 100%;
+}
+
+/* =========================================================
+   BUTTON RESET
+   ========================================================= */
+
+button {
+  border: 0;
+}
+
+/* =========================================================
+   UTILITY
+   ========================================================= */
+
+.itk-gradient {
+  background: var(--brand-gradient);
+}
+
+.itk-gradient-text {
+  background: var(--brand-gradient);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.itk-glow {
+  box-shadow:
+    0 0 0 1px var(--border-brand),
+    0 12px 40px rgba(79, 70, 229, 0.12);
+}
+
+html.dark .itk-glow {
+  box-shadow:
+    0 0 0 1px var(--border-brand),
+    0 12px 40px rgba(99, 102, 241, 0.18);
 }
 
 /* =========================================================
@@ -417,6 +683,10 @@ svg {
    ========================================================= */
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   *,
   *::before,
   *::after {
