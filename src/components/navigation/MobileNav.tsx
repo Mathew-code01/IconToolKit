@@ -1,6 +1,6 @@
 // src/components/navigation/MobileNav.tsx
 
-import { ChevronDown, ChevronRight, X } from "lucide-react";
+import { ChevronDown, ChevronRight,  } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -78,87 +78,7 @@ export default function MobileNav({ open, onClose }: MobileNavProps) {
         />
 
         <div className="relative mx-auto flex min-h-full w-full max-w-2xl flex-col">
-          {/* Header */}
-          <div
-            className="
-              flex
-              items-center
-              justify-between
-              border-b
-              border-[var(--border)]
-              px-4
-              py-4
-              sm:px-6
-            "
-          >
-            <div>
-              <div
-                className="
-                  flex
-                  items-center
-                  gap-2
-                "
-              >
-                <span
-                  className="
-                    h-2
-                    w-2
-                    rounded-full
-                    bg-[var(--brand)]
-                  "
-                  aria-hidden="true"
-                />
-
-                <p
-                  className="
-                    text-sm
-                    font-bold
-                    text-[var(--text)]
-                  "
-                >
-                  IconToolkit
-                </p>
-              </div>
-
-              <p
-                className="
-                  mt-1
-                  text-xs
-                  text-[var(--text-muted)]
-                "
-              >
-                Digital asset tools for creators and developers.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleClose}
-              aria-label="Close navigation menu"
-              className="
-                inline-flex
-                h-10
-                w-10
-                items-center
-                justify-center
-                rounded-xl
-                border
-                border-[var(--border)]
-                bg-[var(--surface)]
-                text-[var(--text-secondary)]
-                shadow-[var(--shadow-xs)]
-                transition-all
-                hover:border-[var(--border-strong)]
-                hover:bg-[var(--surface-hover)]
-                hover:text-[var(--text)]
-                focus-visible:outline-none
-                focus-visible:ring-2
-                focus-visible:ring-[var(--brand)]
-              "
-            >
-              <X size={18} strokeWidth={2} aria-hidden="true" />
-            </button>
-          </div>
+          
 
           {/* Navigation */}
           <nav

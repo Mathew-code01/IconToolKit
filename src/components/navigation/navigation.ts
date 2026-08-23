@@ -18,6 +18,12 @@ export interface ToolCategory {
   tools: string[];
 }
 
+export interface PrimaryNavigationItem {
+  label: string;
+  href?: string;
+  icon?: typeof AppWindow;
+}
+
 export const toolCategories: ToolCategory[] = [
   {
     label: "Create",
@@ -31,6 +37,7 @@ export const toolCategories: ToolCategory[] = [
       "Social / OG Images",
     ],
   },
+
   {
     label: "Edit",
     description: "Modify and prepare your images",
@@ -47,6 +54,7 @@ export const toolCategories: ToolCategory[] = [
       "Image Editor",
     ],
   },
+
   {
     label: "Convert",
     description: "Convert between image formats",
@@ -63,9 +71,10 @@ export const toolCategories: ToolCategory[] = [
       "PDF → Image",
     ],
   },
+
   {
     label: "Optimize",
-    description: "Reduce size without sacrificing quality",
+    description: "Reduce file size efficiently",
     href: "/optimize",
     icon: Gauge,
     tools: [
@@ -75,6 +84,7 @@ export const toolCategories: ToolCategory[] = [
       "Quality vs File Size",
     ],
   },
+
   {
     label: "Inspect",
     description: "Analyze icons, images and websites",
@@ -89,6 +99,7 @@ export const toolCategories: ToolCategory[] = [
       "PWA Icon Validator",
     ],
   },
+
   {
     label: "Developer",
     description: "Generate production-ready code",
@@ -104,12 +115,13 @@ export const toolCategories: ToolCategory[] = [
   },
 ];
 
-export const primaryNavigation = [
+export const primaryNavigation: PrimaryNavigationItem[] = [
   {
     label: "Generator",
     href: "/generator",
     icon: AppWindow,
   },
+
   {
     label: "Docs",
     href: "/docs",
