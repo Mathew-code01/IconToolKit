@@ -1,7 +1,6 @@
 // src/pages/Home/PopularToolsSection.tsx
 
 // src/pages/Home/PopularToolsSection.tsx
-
 import { motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
@@ -13,9 +12,11 @@ import {
   ImageOff,
   ScanSearch,
   Sparkles,
-  WandSparkles,
+
 } from "lucide-react";
 import { Link } from "react-router-dom";
+
+import logo from "../../assets/logo.png";
 
 /* ============================================================
    TYPES
@@ -42,88 +43,61 @@ const tools: Tool[] = [
     title: "Favicon Generator",
     eyebrow: "Create",
     description:
-      "Turn a single image into a complete favicon package for modern websites, browsers, and devices.",
+      "Turn one image into a complete favicon system for websites, browsers, devices, and modern app surfaces.",
     href: "/generator",
     icon: FileImage,
     featured: true,
-    capabilities: [
-      "ICO",
-      "PNG",
-      "Apple Touch",
-      "Web manifest",
-    ],
+    capabilities: ["ICO", "PNG", "Apple Touch", "Manifest"],
   },
   {
     rank: "02",
     title: "Background Remover",
     eyebrow: "Edit",
     description:
-      "Remove unwanted backgrounds and prepare clean transparent artwork for your next asset.",
+      "Remove unwanted backgrounds and prepare clean transparent artwork for production use.",
     href: "/edit",
     icon: ImageOff,
-    capabilities: [
-      "Transparency",
-      "Clean edges",
-      "PNG export",
-    ],
+    capabilities: ["Transparency", "Clean edges", "PNG export"],
   },
   {
     rank: "03",
     title: "Image Converter",
     eyebrow: "Convert",
     description:
-      "Move assets between the formats your websites, products, and platforms actually need.",
+      "Convert assets between the formats your websites, products, and platforms actually need.",
     href: "/convert",
     icon: FileImage,
-    capabilities: [
-      "PNG",
-      "JPG",
-      "WebP",
-      "SVG",
-      "ICO",
-    ],
+    capabilities: ["PNG", "JPG", "WebP", "SVG", "ICO"],
   },
   {
     rank: "04",
     title: "Image Compressor",
     eyebrow: "Optimize",
     description:
-      "Reduce unnecessary file weight while keeping your assets sharp, usable, and production-ready.",
+      "Reduce unnecessary file weight while preserving the visual quality your assets deserve.",
     href: "/optimize",
     icon: Gauge,
-    capabilities: [
-      "Compression",
-      "Quality control",
-      "Smaller files",
-    ],
+    capabilities: ["Compression", "Quality control", "Smaller files"],
   },
   {
     rank: "05",
     title: "Favicon Inspector",
     eyebrow: "Inspect",
     description:
-      "Discover the icons and favicon resources a website currently exposes across its pages.",
+      "Discover favicon resources, metadata, and icon variations currently exposed by a website.",
     href: "/inspect",
     icon: ScanSearch,
-    capabilities: [
-      "Website scan",
-      "Metadata",
-      "Icon discovery",
-    ],
+    capabilities: ["Website scan", "Metadata", "Icon discovery"],
   },
   {
     rank: "06",
     title: "Image Cropper",
     eyebrow: "Edit",
     description:
-      "Quickly frame artwork to the exact dimensions and proportions your project requires.",
+      "Frame artwork to exact dimensions and proportions without leaving your asset workflow.",
     href: "/edit",
     icon: Crop,
-    capabilities: [
-      "Aspect ratios",
-      "Custom dimensions",
-      "Fast export",
-    ],
+    capabilities: ["Aspect ratios", "Custom dimensions", "Fast export"],
   },
 ];
 
@@ -131,32 +105,22 @@ const tools: Tool[] = [
    MOTION
    ============================================================ */
 
-const sectionVariants = {
+const viewport = {
+  once: true,
+  amount: 0.15,
+};
+
+const headerVariants = {
   hidden: {
     opacity: 0,
-    y: 22,
+    y: 24,
   },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
       duration: 0.65,
-      ease: "easeOut" as const,
-    },
-  },
-};
-
-const headerVariants = {
-  hidden: {
-    opacity: 0,
-    y: 18,
-  },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.6,
-      ease: "easeOut" as const,
+      ease: [0.22, 1, 0.36, 1] as const,
     },
   },
 };
@@ -174,14 +138,14 @@ const gridVariants = {
 const cardVariants = {
   hidden: {
     opacity: 0,
-    y: 24,
+    y: 28,
   },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.55,
-      ease: "easeOut" as const,
+      duration: 0.6,
+      ease: [0.22, 1, 0.36, 1] as const,
     },
   },
 };
@@ -207,7 +171,7 @@ export default function PopularToolsSection() {
       "
     >
       {/* ======================================================
-          BACKGROUND ATMOSPHERE
+          ATMOSPHERIC BACKGROUND
           ====================================================== */}
 
       <div
@@ -219,81 +183,88 @@ export default function PopularToolsSection() {
           overflow-hidden
         "
       >
-        {/* Primary glow */}
-
         <motion.div
           animate={
             shouldReduceMotion
               ? undefined
               : {
-                  x: [0, 35, 0],
-                  y: [0, -20, 0],
-                  scale: [1, 1.05, 1],
+                  x: [0, 28, 0],
+                  y: [0, -18, 0],
+                  scale: [1, 1.06, 1],
                 }
           }
           transition={
             shouldReduceMotion
               ? undefined
               : {
-                  duration: 15,
+                  duration: 16,
                   repeat: Infinity,
                   ease: "easeInOut",
                 }
           }
           className="
             absolute
-            left-[-12rem]
-            top-[-18rem]
+            -left-48
+            -top-48
             h-[34rem]
             w-[34rem]
             rounded-full
-            bg-[var(--brand)]/[0.035]
+            bg-[var(--brand)]/[0.045]
             blur-3xl
           "
         />
-
-        {/* Secondary glow */}
 
         <motion.div
           animate={
             shouldReduceMotion
               ? undefined
               : {
-                  x: [0, -30, 0],
-                  y: [0, 25, 0],
+                  x: [0, -24, 0],
+                  y: [0, 20, 0],
                 }
           }
           transition={
             shouldReduceMotion
               ? undefined
               : {
-                  duration: 18,
+                  duration: 19,
                   repeat: Infinity,
                   ease: "easeInOut",
                 }
           }
           className="
             absolute
-            right-[-14rem]
-            top-[22%]
-            h-[30rem]
-            w-[30rem]
+            -right-52
+            top-[28%]
+            h-[32rem]
+            w-[32rem]
             rounded-full
-            bg-[var(--brand)]/[0.025]
+            bg-[var(--brand)]/[0.03]
             blur-3xl
           "
         />
-
-        {/* Grid */}
 
         <div
           className="
             absolute
             inset-0
-            opacity-[0.16]
+            opacity-[0.13]
             [background-image:linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)]
             [background-size:80px_80px]
-            [mask-image:linear-gradient(to_bottom,black,transparent_85%)]
+            [mask-image:linear-gradient(to_bottom,black,transparent_82%)]
+          "
+        />
+
+        <div
+          className="
+            absolute
+            inset-x-0
+            top-0
+            h-px
+            bg-gradient-to-r
+            from-transparent
+            via-[var(--brand)]/20
+            to-transparent
           "
         />
       </div>
@@ -323,29 +294,24 @@ export default function PopularToolsSection() {
         <motion.div
           initial={shouldReduceMotion ? false : "hidden"}
           whileInView={shouldReduceMotion ? undefined : "visible"}
-          viewport={{
-            once: true,
-            amount: 0.3,
-          }}
-          variants={sectionVariants}
+          viewport={viewport}
+          variants={headerVariants}
           className="
             grid
             gap-8
-            lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.7fr)]
+            lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.68fr)]
             lg:items-end
             lg:gap-16
           "
         >
-          {/* Header copy */}
-
-          <motion.div variants={headerVariants}>
-            {/* Eyebrow */}
+          <div>
+            {/* Brand signal */}
 
             <div
               className="
                 inline-flex
                 items-center
-                gap-2
+                gap-2.5
                 rounded-full
                 border
                 border-[var(--border)]
@@ -363,17 +329,25 @@ export default function PopularToolsSection() {
                   w-5
                   items-center
                   justify-center
+                  overflow-hidden
                   rounded-md
                   bg-[var(--surface-brand)]
-                  text-[var(--brand)]
                 "
               >
-                <Sparkles
-                  size={11}
-                  strokeWidth={2}
+                <img
+                  src={logo}
+                  alt=""
+                  className="h-3.5 w-3.5 object-contain"
                   aria-hidden="true"
                 />
               </span>
+
+              <Sparkles
+                size={11}
+                strokeWidth={2}
+                className="text-[var(--brand)]"
+                aria-hidden="true"
+              />
 
               <span
                 className="
@@ -384,24 +358,22 @@ export default function PopularToolsSection() {
                   text-[var(--text-muted)]
                 "
               >
-                Frequently used
+                Popular tools
               </span>
             </div>
-
-            {/* Heading */}
 
             <h2
               id="popular-tools-heading"
               className="
                 mt-6
-                max-w-3xl
+                max-w-4xl
                 text-[2.35rem]
                 font-bold
                 leading-[1.03]
                 tracking-[-0.055em]
                 text-[var(--text)]
                 sm:text-5xl
-                lg:text-[3.6rem]
+                lg:text-[3.65rem]
                 xl:text-[4rem]
               "
             >
@@ -410,14 +382,9 @@ export default function PopularToolsSection() {
                 you need right now.
               </span>
             </h2>
-          </motion.div>
+          </div>
 
-          {/* Supporting copy */}
-
-          <motion.div
-            variants={headerVariants}
-            className="lg:pb-1"
-          >
+          <div className="lg:pb-1">
             <p
               className="
                 max-w-xl
@@ -429,8 +396,8 @@ export default function PopularToolsSection() {
               "
             >
               Skip the setup and jump directly into a focused workflow.
-              IconToolkit keeps the common jobs close at hand while the full
-              workspace remains available when you need more control.
+              IconToolkit keeps everyday asset jobs close at hand while giving
+              you the control to take each result all the way to production.
             </p>
 
             <div
@@ -444,16 +411,12 @@ export default function PopularToolsSection() {
               "
             >
               <TrustPoint label="Fast workflows" />
-
               <Divider />
-
               <TrustPoint label="Browser-first" />
-
               <Divider />
-
               <TrustPoint label="Production-ready" />
             </div>
-          </motion.div>
+          </div>
         </motion.div>
 
         {/* ====================================================
@@ -499,7 +462,7 @@ export default function PopularToolsSection() {
         </motion.div>
 
         {/* ====================================================
-            BOTTOM CTA
+            TOOLKIT CTA
             ==================================================== */}
 
         <motion.div
@@ -521,18 +484,18 @@ export default function PopularToolsSection() {
           }
           viewport={{
             once: true,
-            amount: 0.35,
+            amount: 0.3,
           }}
           transition={
             shouldReduceMotion
               ? undefined
               : {
-                  duration: 0.6,
-                  delay: 0.05,
-                  ease: "easeOut",
+                  duration: 0.65,
+                  ease: [0.22, 1, 0.36, 1],
                 }
           }
           className="
+            relative
             mt-5
             overflow-hidden
             rounded-2xl
@@ -545,12 +508,40 @@ export default function PopularToolsSection() {
           "
         >
           <div
+            aria-hidden="true"
+            className="
+              pointer-events-none
+              absolute
+              -right-28
+              -top-32
+              h-72
+              w-72
+              rounded-full
+              bg-[var(--brand)]/[0.055]
+              blur-3xl
+            "
+          />
+
+          <div
+            className="
+              absolute
+              inset-x-0
+              bottom-0
+              h-px
+              bg-gradient-to-r
+              from-transparent
+              via-[var(--brand)]/30
+              to-transparent
+            "
+            aria-hidden="true"
+          />
+
+          <div
             className="
               relative
               flex
               flex-col
               gap-6
-              overflow-hidden
               p-5
               sm:p-6
               lg:flex-row
@@ -560,32 +551,14 @@ export default function PopularToolsSection() {
               lg:py-6
             "
           >
-            {/* CTA glow */}
-
-            <div
-              aria-hidden="true"
-              className="
-                pointer-events-none
-                absolute
-                -right-24
-                -top-24
-                h-56
-                w-56
-                rounded-full
-                bg-[var(--brand)]/[0.045]
-                blur-3xl
-              "
-            />
-
-            {/* CTA content */}
-
-            <div className="relative flex items-start gap-3.5">
+            <div className="flex items-start gap-3.5">
               <motion.div
                 animate={
                   shouldReduceMotion
                     ? undefined
                     : {
-                        rotate: [0, -3, 3, 0],
+                        rotate: [0, -4, 4, 0],
+                        scale: [1, 1.02, 1],
                       }
                 }
                 transition={
@@ -599,22 +572,23 @@ export default function PopularToolsSection() {
                 }
                 className="
                   flex
-                  h-10
-                  w-10
+                  h-11
+                  w-11
                   shrink-0
                   items-center
                   justify-center
+                  overflow-hidden
                   rounded-xl
                   border
                   border-[var(--border)]
                   bg-[var(--surface-muted)]
-                  text-[var(--brand)]
                   shadow-[var(--shadow-xs)]
                 "
               >
-                <WandSparkles
-                  size={16}
-                  strokeWidth={1.8}
+                <img
+                  src={logo}
+                  alt=""
+                  className="h-6 w-6 object-contain"
                   aria-hidden="true"
                 />
               </motion.div>
@@ -639,23 +613,22 @@ export default function PopularToolsSection() {
                     leading-5
                     text-[var(--text-muted)]
                     sm:text-xs
+                    sm:leading-6
                   "
                 >
-                  Browse the complete toolkit and discover every workflow
-                  available for creating, editing, converting, optimizing,
-                  inspecting, and shipping digital assets.
+                  Explore the complete toolkit for creating, editing,
+                  converting, optimizing, inspecting, and shipping digital
+                  assets.
                 </p>
               </div>
             </div>
-
-            {/* CTA button */}
 
             <Link
               to="/tools"
               className="
                 group
-                relative
                 inline-flex
+                min-h-10
                 shrink-0
                 items-center
                 justify-center
@@ -685,7 +658,6 @@ export default function PopularToolsSection() {
               "
             >
               Explore all tools
-
               <ArrowUpRight
                 size={14}
                 strokeWidth={1.8}
@@ -706,7 +678,7 @@ export default function PopularToolsSection() {
 }
 
 /* ============================================================
-   POPULAR TOOL CARD
+   TOOL CARD
    ============================================================ */
 
 interface PopularToolCardProps {
@@ -726,7 +698,18 @@ function PopularToolCard({
     <Link
       to={tool.href}
       aria-label={`Open ${tool.title}`}
-      className="group block h-full"
+      className="
+        group
+        block
+        h-full
+        rounded-2xl
+        focus-visible:outline-none
+        focus-visible:ring-2
+        focus-visible:ring-[var(--brand)]
+        focus-visible:ring-offset-2
+        focus-visible:ring-offset-[var(--surface-muted)]
+        sm:rounded-3xl
+      "
     >
       <motion.article
         whileHover={
@@ -737,8 +720,8 @@ function PopularToolCard({
               }
         }
         transition={{
-          duration: 0.25,
-          ease: "easeOut",
+          duration: 0.28,
+          ease: [0.22, 1, 0.36, 1],
         }}
         className={`
           relative
@@ -753,7 +736,7 @@ function PopularToolCard({
           bg-[var(--background)]
           p-5
           shadow-[var(--shadow-xs)]
-          transition-[border-color,box-shadow]
+          transition-[border-color,box-shadow,background-color]
           duration-300
           group-hover:border-[var(--border-brand)]
           group-hover:shadow-[var(--shadow-lg)]
@@ -762,9 +745,7 @@ function PopularToolCard({
           ${featured ? "lg:min-h-[315px] lg:p-7" : ""}
         `}
       >
-        {/* ==================================================
-            CARD ATMOSPHERE
-            ================================================== */}
+        {/* Ambient glow */}
 
         <div
           aria-hidden="true"
@@ -773,18 +754,18 @@ function PopularToolCard({
             absolute
             -right-20
             -top-20
-            h-52
-            w-52
+            h-56
+            w-56
             rounded-full
-            bg-[var(--brand)]/[0.035]
+            bg-[var(--brand)]/[0.025]
             blur-3xl
             transition-all
             duration-500
-            group-hover:bg-[var(--brand)]/[0.09]
+            group-hover:bg-[var(--brand)]/[0.085]
           "
         />
 
-        {/* Featured decorative architecture */}
+        {/* Featured visual */}
 
         {featured && (
           <div
@@ -792,10 +773,10 @@ function PopularToolCard({
             className="
               pointer-events-none
               absolute
-              bottom-[-3rem]
+              bottom-[-4rem]
               right-[-1rem]
-              h-64
-              w-72
+              h-72
+              w-80
               opacity-70
             "
           >
@@ -804,10 +785,10 @@ function PopularToolCard({
                 absolute
                 bottom-10
                 right-4
-                h-32
-                w-32
+                h-36
+                w-36
                 rotate-12
-                rounded-3xl
+                rounded-[2rem]
                 border
                 border-[var(--border-brand)]
                 bg-[var(--surface)]/[0.45]
@@ -821,14 +802,14 @@ function PopularToolCard({
               className="
                 absolute
                 bottom-16
-                right-20
-                h-32
-                w-32
+                right-24
+                h-36
+                w-36
                 -rotate-6
-                rounded-3xl
+                rounded-[2rem]
                 border
                 border-[var(--border)]
-                bg-[var(--surface-subtle)]/[0.7]
+                bg-[var(--surface-muted)]/[0.75]
                 transition-transform
                 duration-500
                 group-hover:-rotate-12
@@ -838,29 +819,48 @@ function PopularToolCard({
             <div
               className="
                 absolute
-                bottom-24
-                right-36
+                bottom-28
+                right-44
                 h-24
                 w-24
                 rotate-3
                 rounded-2xl
                 border
                 border-[var(--border)]
-                bg-[var(--background)]/[0.8]
+                bg-[var(--background)]/[0.85]
                 transition-transform
                 duration-500
                 group-hover:rotate-6
               "
             />
+
+            <div
+              className="
+                absolute
+                bottom-24
+                right-12
+                h-14
+                w-14
+                rounded-2xl
+                border
+                border-[var(--border-brand)]
+                bg-[var(--surface-brand)]
+                p-3
+                opacity-70
+              "
+            >
+              <img
+                src={logo}
+                alt=""
+                className="h-full w-full object-contain"
+                aria-hidden="true"
+              />
+            </div>
           </div>
         )}
 
-        {/* ==================================================
-            CARD CONTENT
-            ================================================== */}
-
         <div className="relative flex h-full flex-col">
-          {/* Top */}
+          {/* Top row */}
 
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -892,11 +892,7 @@ function PopularToolCard({
                   group-hover:text-[var(--brand)]
                 "
               >
-                <Icon
-                  size={19}
-                  strokeWidth={1.7}
-                  aria-hidden="true"
-                />
+                <Icon size={19} strokeWidth={1.7} aria-hidden="true" />
               </motion.span>
 
               <div>
@@ -929,7 +925,7 @@ function PopularToolCard({
                         text-[var(--brand)]
                       "
                     >
-                      Most popular
+                      Featured
                     </span>
                   )}
                 </div>
@@ -983,9 +979,9 @@ function PopularToolCard({
             </span>
           </div>
 
-          {/* Main */}
+          {/* Main content */}
 
-          <div className="relative mt-7 max-w-xl">
+          <div className="relative mt-7 max-w-2xl">
             <h3
               className={`
                 font-semibold
@@ -1000,20 +996,17 @@ function PopularToolCard({
             <p
               className={`
                 mt-2
-                leading-6
                 text-[var(--text-secondary)]
-                ${featured ? "text-sm sm:text-base sm:leading-7" : "text-sm"}
+                ${featured ? "text-sm leading-6 sm:text-base sm:leading-7" : "text-sm leading-6"}
               `}
             >
               {tool.description}
             </p>
           </div>
 
-          {/* Bottom */}
+          {/* Bottom content */}
 
           <div className="relative mt-auto pt-7">
-            {/* Capabilities */}
-
             <div className="flex flex-wrap gap-1.5">
               {tool.capabilities.map((capability) => (
                 <span
@@ -1025,15 +1018,15 @@ function PopularToolCard({
                     rounded-lg
                     border
                     border-[var(--border)]
-                    bg-[var(--surface-subtle)]
+                    bg-[var(--surface-muted)]
                     px-2.5
                     py-1.5
                     text-[9px]
                     font-medium
                     text-[var(--text-muted)]
-                    transition-colors
+                    transition-all
                     duration-200
-                    group-hover:border-[var(--border-subtle)]
+                    group-hover:border-[var(--border-brand)]/60
                   "
                 >
                   <Check
@@ -1047,8 +1040,6 @@ function PopularToolCard({
                 </span>
               ))}
             </div>
-
-            {/* Explore */}
 
             <div
               className="
@@ -1065,7 +1056,6 @@ function PopularToolCard({
               "
             >
               Open {tool.title}
-
               <ArrowRight
                 size={12}
                 strokeWidth={1.8}
@@ -1080,9 +1070,7 @@ function PopularToolCard({
           </div>
         </div>
 
-        {/* ==================================================
-            ACTIVE EDGE
-            ================================================== */}
+        {/* Active edge */}
 
         <div
           aria-hidden="true"
@@ -1093,7 +1081,7 @@ function PopularToolCard({
             h-px
             w-0
             bg-[var(--brand)]
-            opacity-70
+            opacity-80
             transition-all
             duration-500
             group-hover:w-full
@@ -1112,6 +1100,7 @@ function TrustPoint({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-2">
       <span
+        aria-hidden="true"
         className="
           h-1.5
           w-1.5
