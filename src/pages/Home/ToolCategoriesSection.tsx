@@ -1,8 +1,6 @@
 // src/pages/Home/ToolCategoriesSection.tsx
 
-// src/pages/Home/ToolCategoriesSection.tsx
-
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion, type Variants } from "framer-motion";
 import {
   ArrowUpRight,
   Code2,
@@ -16,7 +14,26 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
-const categories = [
+/* ============================================================
+   TYPES
+   ============================================================ */
+
+type Category = {
+  number: string;
+  title: string;
+  eyebrow: string;
+  description: string;
+  href: string;
+  icon: typeof ImagePlus;
+  tools: string[];
+  featured?: boolean;
+};
+
+/* ============================================================
+   DATA
+   ============================================================ */
+
+const categories: Category[] = [
   {
     number: "01",
     title: "Create",
@@ -85,32 +102,70 @@ const categories = [
   },
 ];
 
-const containerVariants = {
-  hidden: {},
+/* ============================================================
+   MOTION
+   ============================================================ */
+
+/*
+ * Explicit tuple typing prevents Framer Motion from inferring
+ * the cubic-bezier values as a generic number[].
+ */
+const premiumEase: [number, number, number, number] = [0.22, 1, 0.36, 1];
+
+const containerVariants: Variants = {
+  hidden: {
+    opacity: 1,
+  },
+
   visible: {
+    opacity: 1,
     transition: {
       staggerChildren: 0.07,
+      delayChildren: 0.04,
     },
   },
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: {
     opacity: 0,
     y: 24,
   },
+
   visible: {
     opacity: 1,
     y: 0,
     transition: {
       duration: 0.55,
-      ease: [0.22, 1, 0.36, 1],
+      ease: premiumEase,
     },
   },
 };
 
+const sectionRevealVariants: Variants = {
+  hidden: {
+    opacity: 0,
+    y: 18,
+  },
+
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.55,
+      ease: premiumEase,
+    },
+  },
+};
+
+/* ============================================================
+   MAIN SECTION
+   ============================================================ */
+
 export default function ToolCategoriesSection() {
   const shouldReduceMotion = useReducedMotion();
+
+  const motionEnabled = !shouldReduceMotion;
 
   return (
     <section
@@ -126,32 +181,38 @@ export default function ToolCategoriesSection() {
       "
     >
       {/* =====================================================
-          Background atmosphere
+          BACKGROUND ATMOSPHERE
           ===================================================== */}
 
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 overflow-hidden"
+        className="
+          pointer-events-none
+          absolute
+          inset-0
+          overflow-hidden
+        "
       >
-        {/* Main atmospheric light */}
+        {/* Primary glow */}
+
         <motion.div
           animate={
-            shouldReduceMotion
-              ? undefined
-              : {
+            motionEnabled
+              ? {
                   x: [0, 45, 0],
                   y: [0, -20, 0],
                   scale: [1, 1.06, 1],
                 }
+              : undefined
           }
           transition={
-            shouldReduceMotion
-              ? undefined
-              : {
+            motionEnabled
+              ? {
                   duration: 14,
                   repeat: Infinity,
                   ease: "easeInOut",
                 }
+              : undefined
           }
           className="
             absolute
@@ -165,24 +226,25 @@ export default function ToolCategoriesSection() {
           "
         />
 
-        {/* Secondary atmosphere */}
+        {/* Secondary glow */}
+
         <motion.div
           animate={
-            shouldReduceMotion
-              ? undefined
-              : {
+            motionEnabled
+              ? {
                   x: [0, -35, 0],
                   y: [0, 25, 0],
                 }
+              : undefined
           }
           transition={
-            shouldReduceMotion
-              ? undefined
-              : {
+            motionEnabled
+              ? {
                   duration: 17,
                   repeat: Infinity,
                   ease: "easeInOut",
                 }
+              : undefined
           }
           className="
             absolute
@@ -196,7 +258,8 @@ export default function ToolCategoriesSection() {
           "
         />
 
-        {/* Very subtle grid */}
+        {/* Technical grid */}
+
         <div
           className="
             absolute
@@ -208,6 +271,10 @@ export default function ToolCategoriesSection() {
           "
         />
       </div>
+
+      {/* =====================================================
+          CONTENT
+          ===================================================== */}
 
       <div
         className="
@@ -223,15 +290,18 @@ export default function ToolCategoriesSection() {
           xl:px-10
         "
       >
-        {/* =====================================================
-            Section introduction
-            ===================================================== */}
+        {/* ===================================================
+            SECTION HEADER
+            =================================================== */}
 
         <motion.div
-          initial={shouldReduceMotion ? false : "hidden"}
-          whileInView={shouldReduceMotion ? undefined : "visible"}
-          viewport={{ once: true, amount: 0.35 }}
-          variants={itemVariants}
+          initial={motionEnabled ? "hidden" : false}
+          whileInView={motionEnabled ? "visible" : undefined}
+          viewport={{
+            once: true,
+            amount: 0.3,
+          }}
+          variants={sectionRevealVariants}
           className="
             grid
             gap-8
@@ -240,7 +310,8 @@ export default function ToolCategoriesSection() {
             lg:gap-16
           "
         >
-          {/* Left */}
+          {/* Left side */}
+
           <div>
             <div
               className="
@@ -307,7 +378,8 @@ export default function ToolCategoriesSection() {
             </h2>
           </div>
 
-          {/* Right */}
+          {/* Right side */}
+
           <div className="lg:pb-1">
             <p
               className="
@@ -335,19 +407,13 @@ export default function ToolCategoriesSection() {
                 gap-y-2
               "
             >
-              {[
-                "Browser-first",
-                "Private by default",
-                "Developer-ready",
-              ].map((item, index) => (
-                <div
-                  key={item}
-                  className="flex items-center gap-2"
-                >
-                  {index > 0 && (
-                    <span
-                      aria-hidden="true"
-                      className="
+              {["Browser-first", "Private by default", "Developer-ready"].map(
+                (item, index) => (
+                  <div key={item} className="flex items-center gap-2">
+                    {index > 0 && (
+                      <span
+                        aria-hidden="true"
+                        className="
                         mr-2
                         hidden
                         h-1
@@ -356,44 +422,48 @@ export default function ToolCategoriesSection() {
                         bg-[var(--border-strong)]
                         sm:block
                       "
-                    />
-                  )}
+                      />
+                    )}
 
-                  <span
-                    className="
+                    <span
+                      className="
                       h-1.5
                       w-1.5
                       rounded-full
                       bg-[var(--success)]
                     "
-                  />
+                    />
 
-                  <span
-                    className="
+                    <span
+                      className="
                       text-[10px]
                       font-semibold
                       uppercase
                       tracking-[0.07em]
                       text-[var(--text-muted)]
                     "
-                  >
-                    {item}
-                  </span>
-                </div>
-              ))}
+                    >
+                      {item}
+                    </span>
+                  </div>
+                ),
+              )}
             </div>
           </div>
         </motion.div>
 
-        {/* =====================================================
-            Workflow architecture
-            ===================================================== */}
+        {/* ===================================================
+            WORKFLOW GRID
+            =================================================== */}
 
         <motion.div
           variants={containerVariants}
-          initial={shouldReduceMotion ? false : "hidden"}
-          whileInView={shouldReduceMotion ? undefined : "visible"}
-          viewport={{ once: true, amount: 0.08 }}
+          initial={motionEnabled ? "hidden" : false}
+          whileInView={motionEnabled ? "visible" : undefined}
+          viewport={{
+            once: true,
+            amount: 0.08,
+          }}
           className="
             mt-14
             grid
@@ -402,14 +472,9 @@ export default function ToolCategoriesSection() {
             lg:grid-cols-12
           "
         >
-          {/* =================================================
-              Featured CREATE card
-              ================================================= */}
+          {/* Create */}
 
-          <motion.div
-            variants={itemVariants}
-            className="lg:col-span-7"
-          >
+          <motion.div variants={itemVariants} className="lg:col-span-7">
             <WorkflowCard
               category={categories[0]}
               featured
@@ -417,70 +482,45 @@ export default function ToolCategoriesSection() {
             />
           </motion.div>
 
-          {/* =================================================
-              EDIT
-              ================================================= */}
+          {/* Edit */}
 
-          <motion.div
-            variants={itemVariants}
-            className="lg:col-span-5"
-          >
+          <motion.div variants={itemVariants} className="lg:col-span-5">
             <WorkflowCard
               category={categories[1]}
               shouldReduceMotion={Boolean(shouldReduceMotion)}
             />
           </motion.div>
 
-          {/* =================================================
-              CONVERT
-              ================================================= */}
+          {/* Convert */}
 
-          <motion.div
-            variants={itemVariants}
-            className="lg:col-span-4"
-          >
+          <motion.div variants={itemVariants} className="lg:col-span-4">
             <WorkflowCard
               category={categories[2]}
               shouldReduceMotion={Boolean(shouldReduceMotion)}
             />
           </motion.div>
 
-          {/* =================================================
-              OPTIMIZE
-              ================================================= */}
+          {/* Optimize */}
 
-          <motion.div
-            variants={itemVariants}
-            className="lg:col-span-4"
-          >
+          <motion.div variants={itemVariants} className="lg:col-span-4">
             <WorkflowCard
               category={categories[3]}
               shouldReduceMotion={Boolean(shouldReduceMotion)}
             />
           </motion.div>
 
-          {/* =================================================
-              INSPECT
-              ================================================= */}
+          {/* Inspect */}
 
-          <motion.div
-            variants={itemVariants}
-            className="lg:col-span-4"
-          >
+          <motion.div variants={itemVariants} className="lg:col-span-4">
             <WorkflowCard
               category={categories[4]}
               shouldReduceMotion={Boolean(shouldReduceMotion)}
             />
           </motion.div>
 
-          {/* =================================================
-              DEVELOPER
-              ================================================= */}
+          {/* Developer */}
 
-          <motion.div
-            variants={itemVariants}
-            className="lg:col-span-12"
-          >
+          <motion.div variants={itemVariants} className="lg:col-span-12">
             <DeveloperCard
               category={categories[5]}
               shouldReduceMotion={Boolean(shouldReduceMotion)}
@@ -488,22 +528,18 @@ export default function ToolCategoriesSection() {
           </motion.div>
         </motion.div>
 
-        {/* =====================================================
-            Workflow statement
-            ===================================================== */}
+        {/* ===================================================
+            WORKFLOW STATEMENT
+            =================================================== */}
 
         <motion.div
-          initial={shouldReduceMotion ? false : { opacity: 0, y: 18 }}
-          whileInView={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.4 }}
-          transition={
-            shouldReduceMotion
-              ? undefined
-              : {
-                  duration: 0.55,
-                  ease: [0.22, 1, 0.36, 1],
-                }
-          }
+          initial={motionEnabled ? "hidden" : false}
+          whileInView={motionEnabled ? "visible" : undefined}
+          viewport={{
+            once: true,
+            amount: 0.35,
+          }}
+          variants={sectionRevealVariants}
           className="
             mt-5
             overflow-hidden
@@ -546,7 +582,7 @@ export default function ToolCategoriesSection() {
                   shadow-[var(--shadow-xs)]
                 "
               >
-                <Zap size={16} strokeWidth={1.8} />
+                <Zap size={16} strokeWidth={1.8} aria-hidden="true" />
               </div>
 
               <div>
@@ -572,8 +608,8 @@ export default function ToolCategoriesSection() {
                   "
                 >
                   Start with almost anything, refine it, prepare the right
-                  formats, inspect the result, and ship without jumping
-                  between disconnected tools.
+                  formats, inspect the result, and ship without jumping between
+                  disconnected tools.
                 </p>
               </div>
             </div>
@@ -609,9 +645,9 @@ export default function ToolCategoriesSection() {
               "
             >
               Explore all tools
-
               <ArrowUpRight
                 size={14}
+                aria-hidden="true"
                 className="
                   transition-transform
                   duration-200
@@ -632,7 +668,7 @@ export default function ToolCategoriesSection() {
    ============================================================ */
 
 interface WorkflowCardProps {
-  category: (typeof categories)[number];
+  category: Category;
   featured?: boolean;
   shouldReduceMotion: boolean;
 }
@@ -660,7 +696,7 @@ function WorkflowCard({
         }
         transition={{
           duration: 0.25,
-          ease: [0.22, 1, 0.36, 1],
+          ease: premiumEase,
         }}
         className={`
           relative
@@ -685,6 +721,7 @@ function WorkflowCard({
         `}
       >
         {/* Card glow */}
+
         <div
           aria-hidden="true"
           className="
@@ -703,7 +740,8 @@ function WorkflowCard({
           "
         />
 
-        {/* Featured visual lines */}
+        {/* Featured visual */}
+
         {featured && (
           <div
             aria-hidden="true"
@@ -717,16 +755,64 @@ function WorkflowCard({
               opacity-60
             "
           >
-            <div className="absolute bottom-8 right-8 h-28 w-28 rounded-2xl border border-[var(--border-brand)] rotate-12 transition-transform duration-500 group-hover:rotate-[18deg]" />
+            <div
+              className="
+                absolute
+                bottom-8
+                right-8
+                h-28
+                w-28
+                rotate-12
+                rounded-2xl
+                border
+                border-[var(--border-brand)]
+                transition-transform
+                duration-500
+                group-hover:rotate-[18deg]
+              "
+            />
 
-            <div className="absolute bottom-14 right-20 h-28 w-28 rounded-2xl border border-[var(--border)] rotate-[-8deg] bg-[var(--surface-subtle)]/60 transition-transform duration-500 group-hover:rotate-[-14deg]" />
+            <div
+              className="
+                absolute
+                bottom-14
+                right-20
+                h-28
+                w-28
+                rotate-[-8deg]
+                rounded-2xl
+                border
+                border-[var(--border)]
+                bg-[var(--surface-subtle)]/60
+                transition-transform
+                duration-500
+                group-hover:rotate-[-14deg]
+              "
+            />
 
-            <div className="absolute bottom-20 right-32 h-24 w-24 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 rotate-[4deg] transition-transform duration-500 group-hover:rotate-[8deg]" />
+            <div
+              className="
+                absolute
+                bottom-20
+                right-32
+                h-24
+                w-24
+                rotate-[4deg]
+                rounded-2xl
+                border
+                border-[var(--border)]
+                bg-[var(--surface)]/80
+                transition-transform
+                duration-500
+                group-hover:rotate-[8deg]
+              "
+            />
           </div>
         )}
 
         <div className="relative flex h-full flex-col">
-          {/* Top row */}
+          {/* Top */}
+
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <motion.span
@@ -738,6 +824,10 @@ function WorkflowCard({
                         scale: 1.05,
                       }
                 }
+                transition={{
+                  duration: 0.2,
+                  ease: premiumEase,
+                }}
                 className="
                   flex
                   h-11
@@ -756,11 +846,7 @@ function WorkflowCard({
                   group-hover:text-[var(--brand)]
                 "
               >
-                <Icon
-                  size={19}
-                  strokeWidth={1.7}
-                  aria-hidden="true"
-                />
+                <Icon size={19} strokeWidth={1.7} aria-hidden="true" />
               </motion.span>
 
               <div>
@@ -813,6 +899,7 @@ function WorkflowCard({
             >
               <ArrowUpRight
                 size={15}
+                aria-hidden="true"
                 className="
                   transition-transform
                   duration-200
@@ -823,7 +910,8 @@ function WorkflowCard({
             </span>
           </div>
 
-          {/* Main content */}
+          {/* Content */}
+
           <div className="relative mt-7">
             <h3
               className={`
@@ -850,6 +938,7 @@ function WorkflowCard({
           </div>
 
           {/* Bottom */}
+
           <div className="relative mt-auto pt-8">
             <div className="flex flex-wrap gap-1.5">
               {category.tools.map((tool) => (
@@ -890,9 +979,9 @@ function WorkflowCard({
               "
             >
               Explore {category.title}
-
               <ArrowUpRight
                 size={12}
+                aria-hidden="true"
                 className="
                   transition-transform
                   duration-200
@@ -913,14 +1002,11 @@ function WorkflowCard({
    ============================================================ */
 
 interface DeveloperCardProps {
-  category: (typeof categories)[number];
+  category: Category;
   shouldReduceMotion: boolean;
 }
 
-function DeveloperCard({
-  category,
-  shouldReduceMotion,
-}: DeveloperCardProps) {
+function DeveloperCard({ category, shouldReduceMotion }: DeveloperCardProps) {
   const Icon = category.icon;
 
   return (
@@ -939,7 +1025,7 @@ function DeveloperCard({
         }
         transition={{
           duration: 0.25,
-          ease: [0.22, 1, 0.36, 1],
+          ease: premiumEase,
         }}
         className="
           relative
@@ -960,6 +1046,7 @@ function DeveloperCard({
         "
       >
         {/* Developer atmosphere */}
+
         <div
           aria-hidden="true"
           className="
@@ -974,8 +1061,17 @@ function DeveloperCard({
           "
         />
 
-        <div className="relative grid gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.7fr)] lg:items-center">
+        <div
+          className="
+            relative
+            grid
+            gap-7
+            lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.7fr)]
+            lg:items-center
+          "
+        >
           {/* Content */}
+
           <div>
             <div className="flex items-center gap-3">
               <motion.span
@@ -987,6 +1083,10 @@ function DeveloperCard({
                         scale: 1.05,
                       }
                 }
+                transition={{
+                  duration: 0.2,
+                  ease: premiumEase,
+                }}
                 className="
                   flex
                   h-11
@@ -1005,7 +1105,7 @@ function DeveloperCard({
                   group-hover:text-[var(--brand)]
                 "
               >
-                <Icon size={19} strokeWidth={1.7} />
+                <Icon size={19} strokeWidth={1.7} aria-hidden="true" />
               </motion.span>
 
               <div>
@@ -1088,6 +1188,7 @@ function DeveloperCard({
           </div>
 
           {/* Code preview */}
+
           <div
             className="
               relative
@@ -1112,9 +1213,32 @@ function DeveloperCard({
               "
             >
               <div className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-[var(--border-strong)]" />
-                <span className="h-1.5 w-1.5 rounded-full bg-[var(--border-strong)]" />
-                <span className="h-1.5 w-1.5 rounded-full bg-[var(--border-strong)]" />
+                <span
+                  className="
+                    h-1.5
+                    w-1.5
+                    rounded-full
+                    bg-[var(--border-strong)]
+                  "
+                />
+
+                <span
+                  className="
+                    h-1.5
+                    w-1.5
+                    rounded-full
+                    bg-[var(--border-strong)]
+                  "
+                />
+
+                <span
+                  className="
+                    h-1.5
+                    w-1.5
+                    rounded-full
+                    bg-[var(--border-strong)]
+                  "
+                />
               </div>
 
               <span
@@ -1171,8 +1295,17 @@ function CodeLine({ width }: { width: string }) {
         bg-[var(--border)]
       "
       style={{ width }}
+      aria-hidden="true"
     >
-      <div className="h-full w-1/3 rounded-full bg-[var(--brand)] opacity-30" />
+      <div
+        className="
+          h-full
+          w-1/3
+          rounded-full
+          bg-[var(--brand)]
+          opacity-30
+        "
+      />
     </div>
   );
 }
