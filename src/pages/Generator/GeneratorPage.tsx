@@ -1,22 +1,27 @@
 // src/pages/Generator/GeneratorPage.tsx
 // src/pages/Generator/GeneratorPage.tsx
-
 import {
+  useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import JSZip from "jszip";
 
-import UploadPanel from "./UploadPanel";
 import EditorPanel, {
   type EditorSettings,
 } from "./EditorPanel";
+import ExportPanel from "./ExportPanel";
 import PreviewPanel from "./PreviewPanel";
 import SizeGrid, {
   type GeneratedIcon,
 } from "./SizeGrid";
-import ExportPanel from "./ExportPanel";
+import UploadPanel from "./UploadPanel";
+
+/* ============================================================================
+ * Constants
+ * ========================================================================== */
 
 const ICON_SIZES = [
   16,
@@ -32,7 +37,7 @@ const ICON_SIZES = [
   256,
   384,
   512,
-];
+] as const;
 
 const ICO_SIZES = [
   16,
@@ -41,23 +46,25 @@ const ICO_SIZES = [
   64,
   128,
   256,
-];
+] as const;
+
+const MAX_HISTORY = 30;
+const MAX_SHORT_NAME_LENGTH = 18;
+const MAX_DESCRIPTION_LENGTH = 160;
+
+const DEFAULT_DESCRIPTION =
+  "Your website, application or progressive web app.";
 
 const DEFAULT_SETTINGS: EditorSettings = {
   padding: 10,
   scale: 100,
 
-  backgroundMode:
-    "transparent",
+  backgroundMode: "transparent",
 
   background: "#ffffff",
 
-  gradientFrom:
-    "#6366f1",
-
-  gradientTo:
-    "#8b5cf6",
-
+  gradientFrom: "#6366f1",
+  gradientTo: "#8b5cf6",
   gradientAngle: 135,
 
   fit: "contain",
@@ -87,64 +94,181 @@ const DEFAULT_SETTINGS: EditorSettings = {
   },
 };
 
+const FEATURE_TAGS = [
+  "Precision crop",
+  "Real device preview",
+  "PWA",
+  "Apple",
+  "Android",
+  "Favicon",
+  "ICO",
+  "PNG",
+  "SVG",
+  "ZIP",
+] as const;
+
+/* ============================================================================
+ * Utility helpers
+ * ========================================================================== */
+
 function clamp(
   value: number,
   min: number,
   max: number,
-) {
-  return Math.max(
-    min,
-    Math.min(max, value),
-  );
+): number {
+  return Math.max(min, Math.min(max, value));
 }
 
 function colorDistance(
-  a: {
-    r: number;
-    g: number;
-    b: number;
-  },
-  b: {
-    r: number;
-    g: number;
-    b: number;
-  },
-) {
+  a: { r: number; g: number; b: number },
+  b: { r: number; g: number; b: number },
+): number {
   return Math.sqrt(
-    Math.pow(
-      a.r - b.r,
-      2,
-    ) +
-      Math.pow(
-        a.g - b.g,
-        2,
-      ) +
-      Math.pow(
-        a.b - b.b,
-        2,
-      ),
+    Math.pow(a.r - b.r, 2) +
+      Math.pow(a.g - b.g, 2) +
+      Math.pow(a.b - b.b, 2),
   );
 }
+
+function loadImage(
+  source: string,
+): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+
+    image.onload = () => resolve(image);
+    image.onerror = () =>
+      reject(new Error("Unable to load image."));
+
+    image.src = source;
+  });
+}
+
+function revokeObjectUrl(url: string | null): void {
+  if (!url) {
+    return;
+  }
+
+  URL.revokeObjectURL(url);
+}
+
+function dataUrlToUint8Array(
+  dataUrl: string,
+): Uint8Array {
+  const base64 = dataUrl.split(",")[1] ?? "";
+
+  if (!base64) {
+    return new Uint8Array();
+  }
+
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return bytes;
+}
+
+function downloadBlob(
+  blob: Blob,
+  filename: string,
+): void {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.style.display = "none";
+
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+
+  window.setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 1000);
+}
+
+function downloadDataUrl(
+  dataUrl: string,
+  filename: string,
+): void {
+  const bytes = dataUrlToUint8Array(dataUrl);
+
+  downloadBlob(
+    new Blob([bytes], {
+      type: "image/png",
+    }),
+    filename,
+  );
+}
+
+function createAppName(
+  filename: string,
+): string {
+  const normalized = filename
+    .replace(/\.[^/.]+$/, "")
+    .replace(/[-_]+/g, " ")
+    .trim();
+
+  if (!normalized) {
+    return "My Website";
+  }
+
+  return normalized.replace(
+    /\b\w/g,
+    (letter) => letter.toUpperCase(),
+  );
+}
+
+function getExportFilename(
+  size: number,
+): string {
+  switch (size) {
+    case 16:
+      return "favicon-16x16.png";
+
+    case 32:
+      return "favicon-32x32.png";
+
+    case 180:
+      return "apple-touch-icon.png";
+
+    case 192:
+      return "android-chrome-192x192.png";
+
+    case 512:
+      return "android-chrome-512x512.png";
+
+    default:
+      return `icon-${size}x${size}.png`;
+  }
+}
+
+/* ============================================================================
+ * Background removal
+ * ========================================================================== */
 
 async function removeSimpleBackground(
   image: HTMLImageElement,
 ): Promise<HTMLImageElement> {
-  const width =
-    image.naturalWidth;
+  const width = image.naturalWidth;
+  const height = image.naturalHeight;
 
-  const height =
-    image.naturalHeight;
+  if (!width || !height) {
+    return image;
+  }
 
-  const canvas =
-    document.createElement(
-      "canvas",
-    );
+  const canvas = document.createElement("canvas");
 
   canvas.width = width;
   canvas.height = height;
 
-  const context =
-    canvas.getContext("2d");
+  const context = canvas.getContext("2d", {
+    willReadFrequently: true,
+  });
 
   if (!context) {
     return image;
@@ -158,75 +282,61 @@ async function removeSimpleBackground(
     height,
   );
 
-  const imageData =
-    context.getImageData(
-      0,
-      0,
-      width,
-      height,
-    );
+  const imageData = context.getImageData(
+    0,
+    0,
+    width,
+    height,
+  );
 
-  const pixels =
-    imageData.data;
+  const pixels = imageData.data;
 
   const samplePoints = [
     [0, 0],
-    [width - 1, 0],
-    [0, height - 1],
-    [width - 1, height - 1],
-  ];
+    [Math.max(0, width - 1), 0],
+    [0, Math.max(0, height - 1)],
+    [
+      Math.max(0, width - 1),
+      Math.max(0, height - 1),
+    ],
+  ] as const;
 
-  const backgroundColors =
-    samplePoints.map(
-      ([x, y]) => {
-        const index =
-          (y * width + x) *
-          4;
+  const backgroundColors = samplePoints.map(
+    ([x, y]) => {
+      const index = (y * width + x) * 4;
 
-        return {
-          r: pixels[index],
-          g: pixels[
-            index + 1
-          ],
-          b: pixels[
-            index + 2
-          ],
-        };
-      },
-    );
+      return {
+        r: pixels[index],
+        g: pixels[index + 1],
+        b: pixels[index + 2],
+      };
+    },
+  );
 
   const threshold = 45;
 
   for (
     let index = 0;
-    index <
-    pixels.length;
+    index < pixels.length;
     index += 4
   ) {
     const pixel = {
       r: pixels[index],
-      g: pixels[
-        index + 1
-      ],
-      b: pixels[
-        index + 2
-      ],
+      g: pixels[index + 1],
+      b: pixels[index + 2],
     };
 
-    const matches =
+    const matchesBackground =
       backgroundColors.some(
         (background) =>
           colorDistance(
             pixel,
             background,
-          ) <
-          threshold,
+          ) < threshold,
       );
 
-    if (matches) {
-      pixels[
-        index + 3
-      ] = 0;
+    if (matchesBackground) {
+      pixels[index + 3] = 0;
     }
   }
 
@@ -237,63 +347,26 @@ async function removeSimpleBackground(
   );
 
   return loadImage(
-    canvas.toDataURL(
-      "image/png",
-    ),
+    canvas.toDataURL("image/png"),
   );
 }
 
-function loadImage(
-  source: string,
-): Promise<HTMLImageElement> {
-  return new Promise(
-    (
-      resolve,
-      reject,
-    ) => {
-      const image =
-        new Image();
-
-      image.onload = () =>
-        resolve(image);
-
-      image.onerror = reject;
-
-      image.src = source;
-    },
-  );
-}
+/* ============================================================================
+ * Canvas rendering
+ * ========================================================================== */
 
 function getCropRect(
   image: HTMLImageElement,
   settings: EditorSettings,
 ) {
-  const width =
-    image.naturalWidth;
-
-  const height =
-    image.naturalHeight;
+  const width = image.naturalWidth;
+  const height = image.naturalHeight;
 
   return {
-    x:
-      (settings.crop.x /
-        100) *
-      width,
-
-    y:
-      (settings.crop.y /
-        100) *
-      height,
-
-    width:
-      (settings.crop.width /
-        100) *
-      width,
-
-    height:
-      (settings.crop.height /
-        100) *
-      height,
+    x: (settings.crop.x / 100) * width,
+    y: (settings.crop.y / 100) * height,
+    width: (settings.crop.width / 100) * width,
+    height: (settings.crop.height / 100) * height,
   };
 }
 
@@ -301,7 +374,7 @@ function createRoundedPath(
   context: CanvasRenderingContext2D,
   size: number,
   radius: number,
-) {
+): void {
   context.beginPath();
 
   if (radius >= size / 2) {
@@ -314,14 +387,10 @@ function createRoundedPath(
     );
 
     context.closePath();
-
     return;
   }
 
-  context.moveTo(
-    radius,
-    0,
-  );
+  context.moveTo(radius, 0);
 
   context.lineTo(
     size - radius,
@@ -379,26 +448,19 @@ function drawIcon(
   size: number,
   settings: EditorSettings,
 ): string {
-  const canvas =
-    document.createElement(
-      "canvas",
-    );
+  const canvas = document.createElement("canvas");
 
   canvas.width = size;
   canvas.height = size;
 
-  const context =
-    canvas.getContext("2d");
+  const context = canvas.getContext("2d");
 
   if (!context) {
     return "";
   }
 
-  context.imageSmoothingEnabled =
-    true;
-
-  context.imageSmoothingQuality =
-    "high";
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
 
   const radius =
     (clamp(
@@ -410,7 +472,8 @@ function drawIcon(
     size;
 
   /*
-   * Clip the entire icon surface.
+   * Everything rendered inside the icon surface
+   * is clipped to the configured corner radius.
    */
   context.save();
 
@@ -422,9 +485,10 @@ function drawIcon(
 
   context.clip();
 
-  /*
-   * Background.
-   */
+  /* ------------------------------------------------------------------------
+   * Background
+   * ---------------------------------------------------------------------- */
+
   if (
     settings.backgroundMode ===
     "solid"
@@ -450,11 +514,9 @@ function drawIcon(
       180;
 
     const length =
-      size *
-      Math.sqrt(2);
+      size * Math.sqrt(2);
 
-    const center =
-      size / 2;
+    const center = size / 2;
 
     const x1 =
       center -
@@ -494,8 +556,7 @@ function drawIcon(
       settings.gradientTo,
     );
 
-    context.fillStyle =
-      gradient;
+    context.fillStyle = gradient;
 
     context.fillRect(
       0,
@@ -505,15 +566,20 @@ function drawIcon(
     );
   }
 
-  const crop =
-    getCropRect(
-      image,
-      settings,
-    );
+  /* ------------------------------------------------------------------------
+   * Source image geometry
+   * ---------------------------------------------------------------------- */
+
+  const crop = getCropRect(
+    image,
+    settings,
+  );
 
   const sourceRatio =
-    crop.width /
-    crop.height;
+    crop.height > 0
+      ? crop.width /
+        crop.height
+      : 1;
 
   let drawWidth =
     size *
@@ -528,9 +594,7 @@ function drawIcon(
     settings.fit ===
     "contain"
   ) {
-    if (
-      sourceRatio > 1
-    ) {
+    if (sourceRatio > 1) {
       drawHeight =
         drawWidth /
         sourceRatio;
@@ -545,9 +609,7 @@ function drawIcon(
     settings.fit ===
     "cover"
   ) {
-    if (
-      sourceRatio > 1
-    ) {
+    if (sourceRatio > 1) {
       drawWidth =
         drawHeight *
         sourceRatio;
@@ -559,43 +621,37 @@ function drawIcon(
   }
 
   const scale =
-    (settings.scale /
-      100) *
-    (settings.zoom /
-      100);
+    (settings.scale / 100) *
+    (settings.zoom / 100);
 
   drawWidth *= scale;
   drawHeight *= scale;
 
   const offsetX =
-    ((settings.positionX -
-      50) /
+    ((settings.positionX - 50) /
       100) *
     size;
 
   const offsetY =
-    ((settings.positionY -
-      50) /
+    ((settings.positionY - 50) /
       100) *
     size;
 
   const centerX =
-    size / 2 +
-    offsetX;
+    size / 2 + offsetX;
 
   const centerY =
-    size / 2 +
-    offsetY;
+    size / 2 + offsetY;
 
-  /*
-   * Shadow.
-   */
+  /* ------------------------------------------------------------------------
+   * Shadow
+   * ---------------------------------------------------------------------- */
+
   if (settings.shadow) {
-    context.shadowColor =
-      `rgba(0,0,0,${
-        settings.shadowOpacity /
-        100
-      })`;
+    context.shadowColor = `rgba(0, 0, 0, ${
+      settings.shadowOpacity /
+      100
+    })`;
 
     context.shadowBlur =
       settings.shadowBlur;
@@ -606,6 +662,10 @@ function drawIcon(
     context.shadowOffsetY =
       settings.shadowOffsetY;
   }
+
+  /* ------------------------------------------------------------------------
+   * Image
+   * ---------------------------------------------------------------------- */
 
   context.save();
 
@@ -634,17 +694,18 @@ function drawIcon(
 
   context.restore();
 
-  /*
-   * Border.
-   */
+  /* ------------------------------------------------------------------------
+   * Border
+   * ---------------------------------------------------------------------- */
+
   if (
-    settings.borderWidth > 0
+    settings.borderWidth >
+    0
   ) {
     context.shadowColor =
       "transparent";
 
     context.shadowBlur = 0;
-
     context.shadowOffsetX = 0;
     context.shadowOffsetY = 0;
 
@@ -670,35 +731,9 @@ function drawIcon(
   );
 }
 
-function dataUrlToUint8Array(
-  dataUrl: string,
-) {
-  const base64 =
-    dataUrl.split(",")[1] ??
-    "";
-
-  const binary =
-    atob(base64);
-
-  const bytes =
-    new Uint8Array(
-      binary.length,
-    );
-
-  for (
-    let index = 0;
-    index <
-    binary.length;
-    index += 1
-  ) {
-    bytes[index] =
-      binary.charCodeAt(
-        index,
-      );
-  }
-
-  return bytes;
-}
+/* ============================================================================
+ * ICO generation
+ * ========================================================================== */
 
 function createIcoFile(
   icons: GeneratedIcon[],
@@ -706,7 +741,7 @@ function createIcoFile(
   const selectedIcons =
     icons.filter((icon) =>
       ICO_SIZES.includes(
-        icon.size,
+        icon.size as (typeof ICO_SIZES)[number],
       ),
     );
 
@@ -721,11 +756,15 @@ function createIcoFile(
       }),
     );
 
-  const headerSize = 6;
+  if (!pngData.length) {
+    return new Blob([], {
+      type: "image/x-icon",
+    });
+  }
 
+  const headerSize = 6;
   const directorySize =
-    16 *
-    pngData.length;
+    16 * pngData.length;
 
   let offset =
     headerSize +
@@ -734,10 +773,7 @@ function createIcoFile(
   const totalSize =
     offset +
     pngData.reduce(
-      (
-        total,
-        item,
-      ) =>
+      (total, item) =>
         total +
         item.bytes.length,
       0,
@@ -751,6 +787,9 @@ function createIcoFile(
   const view =
     new DataView(buffer);
 
+  /*
+   * ICO header.
+   */
   view.setUint16(
     0,
     0,
@@ -769,12 +808,9 @@ function createIcoFile(
     true,
   );
 
-  let directoryOffset =
-    6;
+  let directoryOffset = 6;
 
-  for (
-    const item of pngData
-  ) {
+  for (const item of pngData) {
     const dimension =
       item.size >= 256
         ? 0
@@ -825,9 +861,7 @@ function createIcoFile(
     );
 
     directoryOffset += 16;
-
-    offset +=
-      item.bytes.length;
+    offset += item.bytes.length;
   }
 
   const output =
@@ -837,9 +871,7 @@ function createIcoFile(
     headerSize +
     directorySize;
 
-  for (
-    const item of pngData
-  ) {
+  for (const item of pngData) {
     output.set(
       item.bytes,
       dataOffset,
@@ -857,142 +889,72 @@ function createIcoFile(
   );
 }
 
+/* ============================================================================
+ * SVG export
+ * ========================================================================== */
+
 function createSvgExport(
   image: HTMLImageElement,
   settings: EditorSettings,
 ): string {
-  /*
-   * This intentionally creates a valid SVG container.
-   *
-   * Since the editor accepts raster sources and applies
-   * raster transformations, embedding the rendered result
-   * is more accurate than pretending the output is a
-   * mathematically reconstructed vector.
-   */
-  const png =
-    drawIcon(
-      image,
-      512,
-      settings,
-    );
+  const png = drawIcon(
+    image,
+    512,
+    settings,
+  );
 
+  /*
+   * This is a raster-backed SVG wrapper.
+   * It preserves the editor's exact visual output.
+   */
   return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
   <image href="${png}" width="512" height="512" preserveAspectRatio="none"/>
 </svg>`;
 }
 
-function downloadBlob(
-  blob: Blob,
-  filename: string,
-) {
-  const url =
-    URL.createObjectURL(
-      blob,
-    );
-
-  const anchor =
-    document.createElement(
-      "a",
-    );
-
-  anchor.href = url;
-  anchor.download =
-    filename;
-
-  document.body.appendChild(
-    anchor,
-  );
-
-  anchor.click();
-
-  anchor.remove();
-
-  window.setTimeout(
-    () =>
-      URL.revokeObjectURL(
-        url,
-      ),
-    1000,
-  );
-}
-
-
-
-function downloadDataUrl(
-  dataUrl: string,
-  filename: string,
-) {
-  const bytes =
-    dataUrlToUint8Array(
-      dataUrl,
-    );
-
-  downloadBlob(
-    new Blob(
-      [bytes],
-      {
-        type: "image/png",
-      },
-    ),
-    filename,
-  );
-}
-
-function getExportFilename(
-  size: number,
-): string {
-  switch (size) {
-    case 16:
-      return "favicon-16x16.png";
-
-    case 32:
-      return "favicon-32x32.png";
-
-    case 192:
-      return "android-chrome-192x192.png";
-
-    case 512:
-      return "android-chrome-512x512.png";
-
-    case 180:
-      return "apple-touch-icon.png";
-
-    default:
-      return `icon-${size}x${size}.png`;
-  }
-}
+/* ============================================================================
+ * Manifest generation
+ * ========================================================================== */
 
 function createManifest(
   siteName: string,
   shortName: string,
   description: string,
-) {
+): string {
   return JSON.stringify(
     {
-      name: siteName || "My Website",
+      name:
+        siteName ||
+        "My Website",
 
-      short_name: shortName || siteName || "My Website",
+      short_name:
+        shortName ||
+        siteName ||
+        "My Website",
 
-      description: description || "",
+      description:
+        description || "",
 
       start_url: "/",
-
       scope: "/",
-
       display: "standalone",
 
-      background_color: "#ffffff",
+      background_color:
+        "#ffffff",
 
-      theme_color: "#6366f1",
+      theme_color:
+        "#6366f1",
 
       icons: [
         {
-          src: "/android-chrome-192x192.png",
+          src:
+            "/android-chrome-192x192.png",
           sizes: "192x192",
           type: "image/png",
         },
         {
-          src: "/android-chrome-512x512.png",
+          src:
+            "/android-chrome-512x512.png",
           sizes: "512x512",
           type: "image/png",
         },
@@ -1003,61 +965,61 @@ function createManifest(
   );
 }
 
+/* ============================================================================
+ * Component
+ * ========================================================================== */
+
 export default function GeneratorPage() {
-  const [siteName, setSiteName] = useState("");
+  const [siteName, setSiteName] =
+    useState("");
 
-  const [shortName, setShortName] = useState("");
+  const [shortName, setShortName] =
+    useState("");
 
-  const [description, setDescription] = useState(
-    "Your website, application or progressive web app.",
-  );
-  const [
-    imageUrl,
-    setImageUrl,
-  ] = useState<
-    string | null
-  >(null);
+  const [description, setDescription] =
+    useState(
+      DEFAULT_DESCRIPTION,
+    );
 
-  const [
-    image,
-    setImage,
-  ] = useState<
-    HTMLImageElement | null
-  >(null);
+  const [imageUrl, setImageUrl] =
+    useState<string | null>(
+      null,
+    );
+
+  const [image, setImage] =
+    useState<HTMLImageElement | null>(
+      null,
+    );
 
   const [
     originalImage,
     setOriginalImage,
-  ] = useState<
-    HTMLImageElement | null
-  >(null);
+  ] =
+    useState<HTMLImageElement | null>(
+      null,
+    );
 
-  const [
-    fileName,
-    setFileName,
-  ] = useState("icon");
+  const [fileName, setFileName] =
+    useState("icon");
 
   const [
     sourceFormat,
     setSourceFormat,
-  ] = useState(
-    "image/png",
-  );
+  ] = useState("image/png");
 
-  const [
-    settings,
-    setSettings,
-  ] =
+  const [settings, setSettings] =
     useState<EditorSettings>(
       DEFAULT_SETTINGS,
     );
 
-  const [
-    history,
-    setHistory,
-  ] = useState<
-    EditorSettings[]
-  >([]);
+  /*
+   * History stores snapshots.
+   *
+   * historyIndex represents the currently
+   * active snapshot.
+   */
+  const [history, setHistory] =
+    useState<EditorSettings[]>([]);
 
   const [
     historyIndex,
@@ -1067,93 +1029,95 @@ export default function GeneratorPage() {
   const [
     generatedIcons,
     setGeneratedIcons,
-  ] = useState<
-    GeneratedIcon[]
-  >([]);
+  ] = useState<GeneratedIcon[]>([]);
 
   const [
     isGenerating,
     setIsGenerating,
   ] = useState(false);
 
-  const updateSettings = (
-    updates: Partial<EditorSettings>,
-  ) => {
-    setSettings(
-      (current) => {
-        const next = {
-          ...current,
-          ...updates,
-        };
+  const generationIdRef =
+    useRef(0);
 
-        setHistory(
-          (items) => {
-            const truncated =
+  /* --------------------------------------------------------------------------
+   * Settings history
+   * ------------------------------------------------------------------------ */
+
+  const updateSettings =
+    useCallback(
+      (
+        updates: Partial<EditorSettings>,
+      ) => {
+        setSettings((current) => {
+          const next = {
+            ...current,
+            ...updates,
+          };
+
+          setHistory((currentHistory) => {
+            const activeHistory =
               historyIndex >= 0
-                ? items.slice(
+                ? currentHistory.slice(
                     0,
                     historyIndex + 1,
                   )
-                : items;
+                : [];
 
             return [
-              ...truncated,
+              ...activeHistory,
               current,
-            ].slice(-30);
-          },
-        );
+              next,
+            ].slice(-MAX_HISTORY);
+          });
 
-        setHistoryIndex(
-          (index) =>
+          setHistoryIndex((currentIndex) =>
             Math.min(
-              index + 1,
-              29,
+              Math.max(currentIndex + 2, 0),
+              MAX_HISTORY - 1,
             ),
-        );
+          );
 
-        return next;
+          return next;
+        });
+
+        setGeneratedIcons([]);
       },
+      [historyIndex],
     );
 
-    setGeneratedIcons([]);
-  };
-
-  const undo = () => {
-    if (historyIndex < 0) {
+  const undo = useCallback(() => {
+    if (
+      historyIndex <= 0 ||
+      !history.length
+    ) {
       return;
     }
 
     const previous =
-      history[
-        historyIndex
-      ];
+      history[historyIndex - 1];
 
     if (!previous) {
       return;
     }
 
     setSettings(previous);
-
     setHistoryIndex(
-      (index) => index - 1,
+      historyIndex - 1,
     );
-
     setGeneratedIcons([]);
-  };
+  }, [history, historyIndex]);
 
-  const redo = () => {
-    const nextIndex =
-      historyIndex + 1;
-
+  const redo = useCallback(() => {
     if (
-      nextIndex >=
-      history.length
+      historyIndex < 0 ||
+      historyIndex >=
+        history.length - 1
     ) {
       return;
     }
 
     const next =
-      history[nextIndex];
+      history[historyIndex + 1];
 
     if (!next) {
       return;
@@ -1161,176 +1125,256 @@ export default function GeneratorPage() {
 
     setSettings(next);
     setHistoryIndex(
-      nextIndex,
+      historyIndex + 1,
     );
-
     setGeneratedIcons([]);
-  };
+  }, [history, historyIndex]);
 
-  const handleFileSelect = (
-    file: File,
-  ) => {
-    if (
-      !file.type.startsWith(
-        "image/",
-      )
-    ) {
-      return;
-    }
+  const canUndo =
+    historyIndex > 0;
 
-    if (imageUrl) {
-      URL.revokeObjectURL(
-        imageUrl,
-      );
-    }
+  const canRedo =
+    historyIndex >= 0 &&
+    historyIndex <
+      history.length - 1;
 
-    const nextUrl =
-      URL.createObjectURL(
-        file,
-      );
+  /* --------------------------------------------------------------------------
+   * File handling
+   * ------------------------------------------------------------------------ */
 
-    const nextImage =
-      new Image();
+  const handleFileSelect =
+    useCallback(
+      (file: File) => {
+        if (
+          !file.type.startsWith(
+            "image/",
+          )
+        ) {
+          return;
+        }
 
-    nextImage.onload = () => {
-      setImage(
-        nextImage,
-      );
+        const nextUrl =
+          URL.createObjectURL(
+            file,
+          );
 
-      setOriginalImage(
-        nextImage,
-      );
-    };
+        const nextImage =
+          new Image();
 
-    nextImage.src =
-      nextUrl;
+        nextImage.onload = () => {
+          setImage(nextImage);
+          setOriginalImage(
+            nextImage,
+          );
+        };
 
-    setImageUrl(
-      nextUrl,
+        nextImage.onerror = () => {
+          revokeObjectUrl(
+            nextUrl,
+          );
+          setImage(null);
+          setOriginalImage(
+            null,
+          );
+          setImageUrl(null);
+        };
+
+        nextImage.src =
+          nextUrl;
+
+        setImageUrl(
+          nextUrl,
+        );
+
+        setSourceFormat(
+          file.type ||
+            "image/png",
+        );
+
+        const cleanName =
+          file.name
+            .replace(
+              /\.[^/.]+$/,
+              "",
+            )
+            .trim();
+
+        const generatedName =
+          cleanName || "icon";
+
+        const generatedSiteName =
+          createAppName(
+            generatedName,
+          );
+
+        setFileName(
+          generatedName,
+        );
+
+        setSiteName(
+          generatedSiteName,
+        );
+
+        setShortName(
+          generatedSiteName.slice(
+            0,
+            MAX_SHORT_NAME_LENGTH,
+          ),
+        );
+
+        setDescription(
+          DEFAULT_DESCRIPTION,
+        );
+
+        setSettings(
+          DEFAULT_SETTINGS,
+        );
+
+        setHistory([
+          DEFAULT_SETTINGS,
+        ]);
+
+        setHistoryIndex(0);
+
+        setGeneratedIcons([]);
+      },
+      [],
     );
-
-    setSourceFormat(
-      file.type ||
-        "image/png",
-    );
-
-    const cleanName =
-      file.name
-        .replace(
-          /\.[^/.]+$/,
-          "",
-        )
-        .trim();
-
-    const generatedName = cleanName || "icon";
-
-    setFileName(generatedName);
-
-    const generatedSiteName = generatedName
-      .replace(/[-_]+/g, " ")
-      .replace(/\b\w/g, (letter) => letter.toUpperCase());
-
-    setSiteName(generatedSiteName);
-
-    setShortName(generatedSiteName.slice(0, 18));
-
-    setDescription("Your website, application or progressive web app.");
-
-    setSettings(
-      DEFAULT_SETTINGS,
-    );
-
-    setHistory([]);
-    setHistoryIndex(-1);
-    setGeneratedIcons([]);
-  };
 
   const handleRemoveImage =
-    () => {
-      if (imageUrl) {
-        URL.revokeObjectURL(
-          imageUrl,
-        );
-      }
+    useCallback(() => {
+      revokeObjectUrl(
+        imageUrl,
+      );
 
       setImageUrl(null);
       setImage(null);
       setOriginalImage(null);
+
       setFileName("icon");
       setSiteName("");
       setShortName("");
-      setDescription("Your website, application or progressive web app.");
+      setDescription(
+        DEFAULT_DESCRIPTION,
+      );
+
       setSourceFormat(
         "image/png",
       );
+
       setSettings(
         DEFAULT_SETTINGS,
       );
-      setHistory([]);
-      setHistoryIndex(-1);
+
+      setHistory([
+        DEFAULT_SETTINGS,
+      ]);
+
+      setHistoryIndex(0);
+
       setGeneratedIcons([]);
-    };
+    }, [imageUrl]);
 
   const handleRemoveBackground =
-    async () => {
+    useCallback(async () => {
       if (!image) {
         return;
       }
 
-      const processed =
-        await removeSimpleBackground(
-          image,
-        );
+      try {
+        const processed =
+          await removeSimpleBackground(
+            image,
+          );
 
-      setImage(processed);
+        setImage(processed);
+        setGeneratedIcons([]);
+      } catch {
+        /*
+         * Keep the original image intact
+         * if processing fails.
+         */
+      }
+    }, [image]);
+
+  const resetImage =
+    useCallback(() => {
+      if (!originalImage) {
+        return;
+      }
+
+      setImage(
+        originalImage,
+      );
+
+      setSettings(
+        DEFAULT_SETTINGS,
+      );
+
+      setHistory([
+        DEFAULT_SETTINGS,
+      ]);
+
+      setHistoryIndex(0);
+
       setGeneratedIcons([]);
-    };
+    }, [originalImage]);
 
-  const resetImage = () => {
-    if (!originalImage) {
-      return;
-    }
+  /* --------------------------------------------------------------------------
+   * Transform controls
+   * ------------------------------------------------------------------------ */
 
-    setImage(
-      originalImage,
-    );
+  const rotateLeft =
+    useCallback(() => {
+      updateSettings({
+        rotation:
+          (settings.rotation -
+            90 +
+            360) %
+          360,
+      });
+    }, [
+      settings.rotation,
+      updateSettings,
+    ]);
 
-    setSettings(
-      DEFAULT_SETTINGS,
-    );
+  const rotateRight =
+    useCallback(() => {
+      updateSettings({
+        rotation:
+          (settings.rotation +
+            90) %
+          360,
+      });
+    }, [
+      settings.rotation,
+      updateSettings,
+    ]);
 
-    setGeneratedIcons([]);
-  };
-
-  const rotateLeft = () => {
-    updateSettings({
-      rotation:
-        (settings.rotation -
-          90 +
-          360) %
-        360,
-    });
-  };
-
-  const rotateRight = () => {
-    updateSettings({
-      rotation:
-        (settings.rotation +
-          90) %
-        360,
-    });
-  };
+  /* --------------------------------------------------------------------------
+   * Icon generation
+   * ------------------------------------------------------------------------ */
 
   const generateIcons =
-    () => {
+    useCallback(() => {
       if (!image) {
         return;
       }
+
+      const generationId =
+        ++generationIdRef.current;
 
       setIsGenerating(true);
 
-      requestAnimationFrame(
-        () => {
+      requestAnimationFrame(() => {
+        if (
+          generationId !==
+          generationIdRef.current
+        ) {
+          return;
+        }
+
+        try {
           const icons =
             ICON_SIZES.map(
               (size) => ({
@@ -1347,13 +1391,15 @@ export default function GeneratorPage() {
           setGeneratedIcons(
             icons,
           );
+        } finally {
+          setIsGenerating(false);
+        }
+      });
+    }, [image, settings]);
 
-          setIsGenerating(
-            false,
-          );
-        },
-      );
-    };
+  /* --------------------------------------------------------------------------
+   * Preview / exports
+   * ------------------------------------------------------------------------ */
 
   const previewUrl =
     useMemo(() => {
@@ -1366,10 +1412,7 @@ export default function GeneratorPage() {
         512,
         settings,
       );
-    }, [
-      image,
-      settings,
-    ]);
+    }, [image, settings]);
 
   const svgContent =
     useMemo(() => {
@@ -1381,22 +1424,12 @@ export default function GeneratorPage() {
         image,
         settings,
       );
-    }, [
-      image,
-      settings,
-    ]);
+    }, [image, settings]);
 
-  const appName =
-    fileName
-      .replace(
-        /[-_]+/g,
-        " ",
-      )
-      .replace(
-        /\b\w/g,
-        (letter) =>
-          letter.toUpperCase(),
-      );
+  const appName = useMemo(
+    () => createAppName(fileName),
+    [fileName],
+  );
 
   const htmlSnippet =
     useMemo(
@@ -1409,40 +1442,54 @@ export default function GeneratorPage() {
       [],
     );
 
-  const manifestSnippet = useMemo(
-    () =>
-      createManifest(
-        siteName || appName,
-
-        shortName || siteName || appName,
-
+  const manifestSnippet =
+    useMemo(
+      () =>
+        createManifest(
+          siteName ||
+            appName,
+          shortName ||
+            siteName ||
+            appName,
+          description,
+        ),
+      [
+        siteName,
+        shortName,
         description,
-      ),
-    [siteName, shortName, description, appName],
-  );
+        appName,
+      ],
+    );
+
+  /* --------------------------------------------------------------------------
+   * Downloads
+   * ------------------------------------------------------------------------ */
 
   const handleDownloadIcon =
-    (size: number) => {
-      const icon =
-        generatedIcons.find(
-          (item) =>
-            item.size === size,
+    useCallback(
+      (size: number) => {
+        const icon =
+          generatedIcons.find(
+            (item) =>
+              item.size === size,
+          );
+
+        if (!icon) {
+          return;
+        }
+
+        downloadDataUrl(
+          icon.dataUrl,
+          getExportFilename(
+            size,
+          ),
         );
-
-      if (!icon) {
-        return;
-      }
-
-      downloadDataUrl(
-        icon.dataUrl,
-        getExportFilename(
-          size,
-        ),
-      );
-    };
+      },
+      [generatedIcons],
+    );
 
   const handleDownloadSvg =
-    () => {
+    useCallback(() => {
       if (!svgContent) {
         return;
       }
@@ -1457,13 +1504,12 @@ export default function GeneratorPage() {
         ),
         `${fileName}.svg`,
       );
-    };
+    }, [fileName, svgContent]);
 
   const handleDownloadIco =
-    () => {
+    useCallback(() => {
       if (
-        generatedIcons.length ===
-        0
+        !generatedIcons.length
       ) {
         return;
       }
@@ -1474,13 +1520,12 @@ export default function GeneratorPage() {
         ),
         "favicon.ico",
       );
-    };
+    }, [generatedIcons]);
 
   const handleDownloadZip =
-    async () => {
+    useCallback(async () => {
       if (
-        generatedIcons.length ===
-          0 &&
+        !generatedIcons.length &&
         !svgContent
       ) {
         return;
@@ -1503,14 +1548,23 @@ export default function GeneratorPage() {
           "public",
         );
 
-      const iconsFolder =
-        publicFolder?.folder(
-          "icons",
-        );
-
       if (!publicFolder) {
         return;
       }
+
+      const iconsFolder =
+        publicFolder.folder(
+          "icons",
+        );
+
+      const rootLevelFiles =
+        new Set([
+          "favicon-16x16.png",
+          "favicon-32x32.png",
+          "android-chrome-192x192.png",
+          "android-chrome-512x512.png",
+          "apple-touch-icon.png",
+        ]);
 
       generatedIcons.forEach(
         (icon) => {
@@ -1519,33 +1573,14 @@ export default function GeneratorPage() {
               icon.size,
             );
 
-          /*
-           * Standard files live directly
-           * inside public/.
-           */
-          if (
-            filename ===
-              "favicon-16x16.png" ||
-            filename ===
-              "favicon-32x32.png" ||
-            filename ===
-              "android-chrome-192x192.png" ||
-            filename ===
-              "android-chrome-512x512.png" ||
-            filename ===
-              "apple-touch-icon.png"
-          ) {
-            publicFolder.file(
+          const targetFolder =
+            rootLevelFiles.has(
               filename,
-              dataUrlToUint8Array(
-                icon.dataUrl,
-              ),
-            );
+            )
+              ? publicFolder
+              : iconsFolder;
 
-            return;
-          }
-
-          iconsFolder?.file(
+          targetFolder?.file(
             filename,
             dataUrlToUint8Array(
               icon.dataUrl,
@@ -1557,12 +1592,15 @@ export default function GeneratorPage() {
       if (
         generatedIcons.length
       ) {
+        const icoBlob =
+          createIcoFile(
+            generatedIcons,
+          );
+
         publicFolder.file(
           "favicon.ico",
           new Uint8Array(
-            await createIcoFile(
-              generatedIcons,
-            ).arrayBuffer(),
+            await icoBlob.arrayBuffer(),
           ),
         );
       }
@@ -1626,75 +1664,174 @@ All image processing was performed locally in the browser.
         blob,
         `${fileName}-icon-set.zip`,
       );
-    };
+    }, [
+      generatedIcons,
+      svgContent,
+      fileName,
+      manifestSnippet,
+      htmlSnippet,
+      siteName,
+      appName,
+      shortName,
+      description,
+    ]);
+
+  /* --------------------------------------------------------------------------
+   * Object URL cleanup
+   * ------------------------------------------------------------------------ */
 
   useEffect(() => {
     return () => {
-      if (imageUrl) {
-        URL.revokeObjectURL(
-          imageUrl,
-        );
-      }
+      revokeObjectUrl(
+        imageUrl,
+      );
     };
   }, [imageUrl]);
 
+  /* --------------------------------------------------------------------------
+   * Render
+   * ------------------------------------------------------------------------ */
+
   return (
     <div className="min-h-screen bg-[var(--background)]">
+      {/* =====================================================================
+       * Page header
+       * =================================================================== */}
+
       <section className="border-b border-[var(--border)]">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] shadow-sm">
+            <div
+              className="
+                inline-flex
+                items-center
+                rounded-full
+                border
+                border-[var(--border)]
+                bg-[var(--surface)]
+                px-3
+                py-1.5
+                text-xs
+                font-semibold
+                text-[var(--text-secondary)]
+                shadow-sm
+              "
+            >
               Professional icon studio
             </div>
 
-            <h1 className="mt-4 text-3xl font-bold tracking-[-0.04em] text-[var(--text)] sm:text-4xl">
-              Create a production-ready icon system.
+            <h1
+              className="
+                mt-4
+                text-3xl
+                font-bold
+                tracking-[-0.04em]
+                text-[var(--text)]
+                sm:text-4xl
+              "
+            >
+              Create a production-ready
+              icon system.
             </h1>
 
-            <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)] sm:text-base">
-              Crop precisely, transform visually, preview in real device
-              contexts, and export a complete favicon, PWA and app icon package.
+            <p
+              className="
+                mt-3
+                text-sm
+                leading-6
+                text-[var(--text-secondary)]
+                sm:text-base
+              "
+            >
+              Crop precisely, transform
+              visually, preview in real
+              device contexts, and export
+              a complete favicon, PWA,
+              and app icon package.
             </p>
 
-            <div className="mt-5 flex flex-wrap gap-2">
-              {[
-                "Precision crop",
-                "Real device preview",
-                "PWA",
-                "Apple",
-                "Android",
-                "Favicon",
-                "ICO",
-                "PNG",
-                "SVG",
-                "ZIP",
-              ].map((item) => (
-                <span
-                  key={item}
-                  className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-[10px] font-medium text-[var(--text-muted)]"
-                >
-                  {item}
-                </span>
-              ))}
+            <div
+              className="
+                mt-5
+                flex
+                flex-wrap
+                gap-2
+              "
+            >
+              {FEATURE_TAGS.map(
+                (item) => (
+                  <span
+                    key={item}
+                    className="
+                      rounded-full
+                      border
+                      border-[var(--border)]
+                      bg-[var(--surface)]
+                      px-3
+                      py-1.5
+                      text-[10px]
+                      font-medium
+                      text-[var(--text-muted)]
+                    "
+                  >
+                    {item}
+                  </span>
+                ),
+              )}
             </div>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-[290px_minmax(0,1fr)_320px] lg:items-start">
-          {/* LEFT COLUMN — Upload + Editor */}
+      {/* =====================================================================
+       * Workspace
+       * =================================================================== */}
+
+      <section
+        className="
+          mx-auto
+          max-w-7xl
+          px-4
+          py-8
+          sm:px-6
+          lg:px-8
+        "
+      >
+        <div
+          className="
+            grid
+            gap-6
+            lg:grid-cols-[290px_minmax(0,1fr)_320px]
+            lg:items-start
+          "
+        >
+          {/* -----------------------------------------------------------------
+           * Left column
+           * ---------------------------------------------------------------- */}
+
           <div className="space-y-6">
             <UploadPanel
               imageUrl={imageUrl}
               fileName={fileName}
               sourceFormat={sourceFormat}
-              imageWidth={image?.naturalWidth ?? 0}
-              imageHeight={image?.naturalHeight ?? 0}
-              onFileSelect={handleFileSelect}
-              onRemove={handleRemoveImage}
-              onRemoveBackground={handleRemoveBackground}
-              onResetImage={resetImage}
+              imageWidth={
+                image?.naturalWidth ?? 0
+              }
+              imageHeight={
+                image?.naturalHeight ?? 0
+              }
+              onFileSelect={
+                handleFileSelect
+              }
+              onRemove={
+                handleRemoveImage
+              }
+              onRemoveBackground={
+                handleRemoveBackground
+              }
+              onResetImage={
+                resetImage
+              }
               disabled={!image}
             />
 
@@ -1705,34 +1842,77 @@ All image processing was performed locally in the browser.
               disabled={!image}
               onUndo={undo}
               onRedo={redo}
-              canUndo={historyIndex >= 0}
-              canRedo={historyIndex < history.length - 1}
-              onRotateLeft={rotateLeft}
-              onRotateRight={rotateRight}
+              canUndo={canUndo}
+              canRedo={canRedo}
+              onRotateLeft={
+                rotateLeft
+              }
+              onRotateRight={
+                rotateRight
+              }
             />
           </div>
 
-          {/* CENTER COLUMN — Site Identity + Production Preview */}
-          <div className="min-w-0 space-y-6">
-            {/* Site Identity */}
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
-              <div>
-                <h3 className="text-sm font-semibold text-[var(--text)]">
-                  Site identity
-                </h3>
+          {/* -----------------------------------------------------------------
+           * Center column
+           * ---------------------------------------------------------------- */}
 
-                <p className="mt-1 text-[10px] leading-4 text-[var(--text-muted)]">
-                  These values are used by browser tabs, PWA installation,
-                  mobile shortcuts and app-style previews.
+          <div
+            className="
+              min-w-0
+              space-y-6
+            "
+          >
+            {/* Site identity */}
+
+            <div
+              className="
+                rounded-2xl
+                border
+                border-[var(--border)]
+                bg-[var(--surface)]
+                p-4
+                shadow-sm
+              "
+            >
+              <div>
+                <h2
+                  className="
+                    text-sm
+                    font-semibold
+                    text-[var(--text)]
+                  "
+                >
+                  Site identity
+                </h2>
+
+                <p
+                  className="
+                    mt-1
+                    text-[10px]
+                    leading-4
+                    text-[var(--text-muted)]
+                  "
+                >
+                  These values are used
+                  by browser tabs, PWA
+                  installation, mobile
+                  shortcuts, and
+                  app-style previews.
                 </p>
               </div>
 
               <div className="mt-4 space-y-3">
                 {/* Site name */}
+
                 <div>
                   <label
                     htmlFor="site-name"
-                    className="text-[10px] font-semibold text-[var(--text)]"
+                    className="
+                      text-[10px]
+                      font-semibold
+                      text-[var(--text)]
+                    "
                   >
                     Site name
                   </label>
@@ -1741,29 +1921,71 @@ All image processing was performed locally in the browser.
                     id="site-name"
                     type="text"
                     value={siteName}
-                    onChange={(event) => setSiteName(event.target.value)}
+                    onChange={(event) =>
+                      setSiteName(
+                        event.target
+                          .value,
+                      )
+                    }
                     placeholder="My Website"
                     maxLength={60}
-                    className="mt-1.5 h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 text-xs text-[var(--text)] outline-none transition focus:border-[#6366F1] focus:ring-2 focus:ring-[#6366F1]/10"
+                    className="
+                      mt-1.5
+                      h-9
+                      w-full
+                      rounded-lg
+                      border
+                      border-[var(--border)]
+                      bg-[var(--surface-muted)]
+                      px-3
+                      text-xs
+                      text-[var(--text)]
+                      outline-none
+                      transition
+                      placeholder:text-[var(--text-muted)]
+                      focus:border-[#6366F1]
+                      focus:ring-2
+                      focus:ring-[#6366F1]/10
+                    "
                   />
 
-                  <p className="mt-1 text-[9px] text-[var(--text-muted)]">
-                    Full application/site name.
+                  <p
+                    className="
+                      mt-1
+                      text-[9px]
+                      text-[var(--text-muted)]
+                    "
+                  >
+                    Full application/site
+                    name.
                   </p>
                 </div>
 
                 {/* Short name */}
+
                 <div>
                   <div className="flex items-center justify-between">
                     <label
                       htmlFor="short-name"
-                      className="text-[10px] font-semibold text-[var(--text)]"
+                      className="
+                        text-[10px]
+                        font-semibold
+                        text-[var(--text)]
+                      "
                     >
                       Short name
                     </label>
 
-                    <span className="text-[9px] text-[var(--text-muted)]">
-                      {shortName.length}/18
+                    <span
+                      className="
+                        text-[9px]
+                        text-[var(--text-muted)]
+                      "
+                    >
+                      {shortName.length}/
+                      {
+                        MAX_SHORT_NAME_LENGTH
+                      }
                     </span>
                   </div>
 
@@ -1772,30 +1994,75 @@ All image processing was performed locally in the browser.
                     type="text"
                     value={shortName}
                     onChange={(event) =>
-                      setShortName(event.target.value.slice(0, 18))
+                      setShortName(
+                        event.target.value.slice(
+                          0,
+                          MAX_SHORT_NAME_LENGTH,
+                        ),
+                      )
                     }
                     placeholder="My Website"
-                    maxLength={18}
-                    className="mt-1.5 h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 text-xs text-[var(--text)] outline-none transition focus:border-[#6366F1] focus:ring-2 focus:ring-[#6366F1]/10"
+                    maxLength={
+                      MAX_SHORT_NAME_LENGTH
+                    }
+                    className="
+                      mt-1.5
+                      h-9
+                      w-full
+                      rounded-lg
+                      border
+                      border-[var(--border)]
+                      bg-[var(--surface-muted)]
+                      px-3
+                      text-xs
+                      text-[var(--text)]
+                      outline-none
+                      transition
+                      placeholder:text-[var(--text-muted)]
+                      focus:border-[#6366F1]
+                      focus:ring-2
+                      focus:ring-[#6366F1]/10
+                    "
                   />
 
-                  <p className="mt-1 text-[9px] text-[var(--text-muted)]">
-                    Used where space is limited, such as installed shortcuts.
+                  <p
+                    className="
+                      mt-1
+                      text-[9px]
+                      text-[var(--text-muted)]
+                    "
+                  >
+                    Used where space is
+                    limited, such as
+                    installed shortcuts.
                   </p>
                 </div>
 
                 {/* Description */}
+
                 <div>
                   <div className="flex items-center justify-between">
                     <label
                       htmlFor="site-description"
-                      className="text-[10px] font-semibold text-[var(--text)]"
+                      className="
+                        text-[10px]
+                        font-semibold
+                        text-[var(--text)]
+                      "
                     >
                       Description
                     </label>
 
-                    <span className="text-[9px] text-[var(--text-muted)]">
-                      {description.length}/160
+                    <span
+                      className="
+                        text-[9px]
+                        text-[var(--text-muted)]
+                      "
+                    >
+                      {description.length}/
+                      {
+                        MAX_DESCRIPTION_LENGTH
+                      }
                     </span>
                   </div>
 
@@ -1803,27 +2070,66 @@ All image processing was performed locally in the browser.
                     id="site-description"
                     value={description}
                     onChange={(event) =>
-                      setDescription(event.target.value.slice(0, 160))
+                      setDescription(
+                        event.target.value.slice(
+                          0,
+                          MAX_DESCRIPTION_LENGTH,
+                        ),
+                      )
                     }
                     rows={3}
+                    maxLength={
+                      MAX_DESCRIPTION_LENGTH
+                    }
                     placeholder="Describe your website or application..."
-                    className="mt-1.5 w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2 text-xs leading-5 text-[var(--text)] outline-none transition focus:border-[#6366F1] focus:ring-2 focus:ring-[#6366F1]/10"
+                    className="
+                      mt-1.5
+                      w-full
+                      resize-none
+                      rounded-lg
+                      border
+                      border-[var(--border)]
+                      bg-[var(--surface-muted)]
+                      px-3
+                      py-2
+                      text-xs
+                      leading-5
+                      text-[var(--text)]
+                      outline-none
+                      transition
+                      placeholder:text-[var(--text-muted)]
+                      focus:border-[#6366F1]
+                      focus:ring-2
+                      focus:ring-[#6366F1]/10
+                    "
                   />
 
-                  <p className="mt-1 text-[9px] text-[var(--text-muted)]">
-                    Used by the PWA and installed-app preview.
+                  <p
+                    className="
+                      mt-1
+                      text-[9px]
+                      text-[var(--text-muted)]
+                    "
+                  >
+                    Used by the PWA and
+                    installed-app preview.
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Production Preview */}
+            {/* Production preview */}
+
             <div className="min-w-0">
               <PreviewPanel
                 imageUrl={previewUrl}
                 hasImage={Boolean(image)}
-                imageWidth={image?.naturalWidth ?? 0}
-                imageHeight={image?.naturalHeight ?? 0}
+                imageWidth={
+                  image?.naturalWidth ?? 0
+                }
+                imageHeight={
+                  image?.naturalHeight ?? 0
+                }
                 settings={settings}
                 siteName={siteName}
                 shortName={shortName}
@@ -1832,31 +2138,57 @@ All image processing was performed locally in the browser.
             </div>
           </div>
 
-          {/* RIGHT COLUMN — Export */}
+          {/* -----------------------------------------------------------------
+           * Right column
+           * ---------------------------------------------------------------- */}
+
           <div className="min-w-0">
             <ExportPanel
               fileName={fileName}
               icons={generatedIcons}
               disabled={!image}
-              isGenerating={isGenerating}
+              isGenerating={
+                isGenerating
+              }
               svgContent={svgContent}
-              htmlSnippet={htmlSnippet}
-              manifestSnippet={manifestSnippet}
-              onGenerate={generateIcons}
-              onDownloadIcon={handleDownloadIcon}
-              onDownloadSvg={handleDownloadSvg}
-              onDownloadIco={handleDownloadIco}
-              onDownloadZip={handleDownloadZip}
+              htmlSnippet={
+                htmlSnippet
+              }
+              manifestSnippet={
+                manifestSnippet
+              }
+              onGenerate={
+                generateIcons
+              }
+              onDownloadIcon={
+                handleDownloadIcon
+              }
+              onDownloadSvg={
+                handleDownloadSvg
+              }
+              onDownloadIco={
+                handleDownloadIco
+              }
+              onDownloadZip={
+                handleDownloadZip
+              }
             />
           </div>
         </div>
 
-        {/* Generated Sizes */}
+        {/* ===================================================================
+         * Generated icon sizes
+         * ================================================================= */}
+
         <div className="mt-8">
           <SizeGrid
             icons={generatedIcons}
-            isGenerating={isGenerating}
-            onDownload={handleDownloadIcon}
+            isGenerating={
+              isGenerating
+            }
+            onDownload={
+              handleDownloadIcon
+            }
           />
         </div>
       </section>
