@@ -191,14 +191,15 @@ function downloadBlob(
   }, 1000);
 }
 
-function downloadDataUrl(
-  dataUrl: string,
-  filename: string,
-): void {
+function downloadDataUrl(dataUrl: string, filename: string): void {
   const bytes = dataUrlToUint8Array(dataUrl);
 
+  const buffer = new ArrayBuffer(bytes.byteLength);
+
+  new Uint8Array(buffer).set(bytes);
+
   downloadBlob(
-    new Blob([bytes], {
+    new Blob([buffer], {
       type: "image/png",
     }),
     filename,
