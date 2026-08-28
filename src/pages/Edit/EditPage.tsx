@@ -2718,8 +2718,9 @@ export default function EditPage() {
         text-[var(--text)]
         transition-colors duration-300
       "
-      onDrop={handleDrop}
       onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
     >
       {/* ===================================================
           HEADER
@@ -2892,9 +2893,7 @@ export default function EditPage() {
           >
             <Upload size={13} />
 
-            <span className="hidden sm:inline">
-              Replace
-            </span>
+            <span className="hidden sm:inline">Replace</span>
           </button>
 
           <button
@@ -2939,11 +2938,7 @@ export default function EditPage() {
               hover:text-[var(--text)]
             "
           >
-            {theme === "dark" ? (
-              <Sun size={14} />
-            ) : (
-              <Moon size={14} />
-            )}
+            {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
           </button>
 
           <button
@@ -2968,9 +2963,7 @@ export default function EditPage() {
           >
             <Download size={13} />
 
-            <span className="hidden sm:inline">
-              Download
-            </span>
+            <span className="hidden sm:inline">Download</span>
           </button>
         </div>
       </header>
@@ -2998,11 +2991,7 @@ export default function EditPage() {
             transition-[width]
             duration-300
             ease-out
-            ${
-              leftPanelOpen
-                ? "w-[220px]"
-                : "w-0 overflow-hidden"
-            }
+            ${leftPanelOpen ? "w-[220px]" : "w-0 overflow-hidden"}
           `}
         >
           <div className="flex h-full flex-col">
@@ -3185,19 +3174,11 @@ export default function EditPage() {
           >
             <button
               type="button"
-              title={
-                leftPanelOpen
-                  ? "Hide tools panel"
-                  : "Show tools panel"
-              }
+              title={leftPanelOpen ? "Hide tools panel" : "Show tools panel"}
               aria-label={
-                leftPanelOpen
-                  ? "Hide tools panel"
-                  : "Show tools panel"
+                leftPanelOpen ? "Hide tools panel" : "Show tools panel"
               }
-              onClick={() =>
-                setLeftPanelOpen((current) => !current)
-              }
+              onClick={() => setLeftPanelOpen((current) => !current)}
               className="
                 hidden h-8 w-8
                 items-center justify-center
@@ -3224,9 +3205,7 @@ export default function EditPage() {
                   ? "Hide properties panel"
                   : "Show properties panel"
               }
-              onClick={() =>
-                setRightPanelOpen((current) => !current)
-              }
+              onClick={() => setRightPanelOpen((current) => !current)}
               className={`
                 hidden h-8 w-8
                 items-center justify-center
@@ -3339,9 +3318,7 @@ export default function EditPage() {
               type="button"
               title="Next tool"
               onClick={goToNextTool}
-              disabled={
-                activeTool === tools[tools.length - 1].id
-              }
+              disabled={activeTool === tools[tools.length - 1].id}
               className="
                 hidden h-8 w-8
                 items-center justify-center
@@ -3370,9 +3347,7 @@ export default function EditPage() {
           >
             <button
               type="button"
-              onClick={() =>
-                setMobileToolsOpen((current) => !current)
-              }
+              onClick={() => setMobileToolsOpen((current) => !current)}
               className="
                 flex h-9
                 items-center gap-2
@@ -3491,8 +3466,7 @@ export default function EditPage() {
                   transparent 1px
                 )
               `,
-              backgroundSize:
-                "var(--editor-grid-size) var(--editor-grid-size)",
+              backgroundSize: "var(--editor-grid-size) var(--editor-grid-size)",
             }}
           >
             <div
@@ -3519,14 +3493,8 @@ export default function EditPage() {
                   ease-out
                 "
                 style={{
-                  width: Math.max(
-                    180,
-                    editor.resize.width * (zoom / 100),
-                  ),
-                  height: Math.max(
-                    180,
-                    editor.resize.height * (zoom / 100),
-                  ),
+                  width: Math.max(180, editor.resize.width * (zoom / 100)),
+                  height: Math.max(180, editor.resize.height * (zoom / 100)),
                 }}
               >
                 <ImageEditorTool
@@ -3593,9 +3561,7 @@ export default function EditPage() {
                 "
               />
 
-              <span>
-                {activeToolDefinition.label}
-              </span>
+              <span>{activeToolDefinition.label}</span>
 
               <span>•</span>
 
@@ -3630,11 +3596,7 @@ export default function EditPage() {
             transition-[width]
             duration-300
             ease-out
-            ${
-              rightPanelOpen
-                ? "w-[280px] xl:w-[320px]"
-                : "w-0 overflow-hidden"
-            }
+            ${rightPanelOpen ? "w-[280px] xl:w-[320px]" : "w-0 overflow-hidden"}
           `}
         >
           <div className="flex h-full flex-col">
@@ -3902,9 +3864,7 @@ export default function EditPage() {
 
               <button
                 type="button"
-                onClick={() =>
-                  setMobileToolsOpen(false)
-                }
+                onClick={() => setMobileToolsOpen(false)}
                 className="
                   flex h-8 w-8
                   items-center justify-center
@@ -4017,9 +3977,7 @@ export default function EditPage() {
           <button
             type="button"
             aria-label="Close inspector"
-            onClick={() =>
-              setMobileInspectorOpen(false)
-            }
+            onClick={() => setMobileInspectorOpen(false)}
             className="
               absolute inset-0
               bg-black/40
@@ -4073,9 +4031,7 @@ export default function EditPage() {
 
               <button
                 type="button"
-                onClick={() =>
-                  setMobileInspectorOpen(false)
-                }
+                onClick={() => setMobileInspectorOpen(false)}
                 className="
                   flex h-8 w-8
                   shrink-0
