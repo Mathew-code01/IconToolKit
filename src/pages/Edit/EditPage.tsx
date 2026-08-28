@@ -351,7 +351,8 @@ function createDownloadName(
   const baseName =
     imageName
       .replace(/\.[^/.]+$/, "")
-      .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
+      .replace(/[<>:"/\\|?*]/g, "")
+      .replace(/[\u0000-\u001F\u007F]/g, "")
       .trim() || "edited-image";
 
   return `${baseName}-${width}x${height}.${extension}`;
