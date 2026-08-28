@@ -10,7 +10,6 @@ import {
   useState,
   type ChangeEvent,
   type DragEvent,
-  type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 
 import {
