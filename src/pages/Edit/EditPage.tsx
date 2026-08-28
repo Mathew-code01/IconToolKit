@@ -2245,6 +2245,7 @@ export default function EditPage() {
           <BackgroundEditor
             settings={editor.background}
             onChange={updateBackground}
+            onInteractionEnd={commitInteractionHistory}
           />
         );
 
